@@ -1,0 +1,22 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+.m2/
+
+# Java
+*.class
+*.log
+hs_err_pid*
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build helpers
+dependency-reduced-pom.xml

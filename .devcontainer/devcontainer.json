@@ -1,0 +1,37 @@
+{
+  "name": "XSLT Transformation Service Dev",
+  "build": {
+    "dockerfile": "Containerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": "true",
+      "installGradle": "false"
+    }
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/work,type=bind",
+  "workspaceFolder": "/work",
+  "shutdownAction": "stopContainer",
+  "forwardPorts": [
+    8080
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder}/.m2,target=/home/vscode/.m2,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-spring-boot",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "remote.restoreForwardedPorts": true
+      }
+    }
+  },
+  "postCreateCommand": "mvn -q -DskipTests compile",
+  "remoteUser": "vscode"
+}

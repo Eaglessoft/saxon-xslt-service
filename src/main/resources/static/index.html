@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XSLT Transformation Service | Eaglessoft</title>
+  <meta name="description" content="Transform XML documents with user-provided XSLT 3.0 through a simple web interface.">
+  <link rel="icon" type="image/svg+xml" href="/FAVICON.svg">
+  <link rel="apple-touch-icon" href="/Varlik-7.png">
+  <link rel="stylesheet" href="/app.css?v=2.2">
+</head>
+<body>
+  <div class="top-bar">
+    <div class="top-bar-content">
+      <a href="https://eaglessoft.com/" target="_blank" rel="noopener noreferrer" class="logo-container">
+        <img src="/EAGLESSOFT-White@3x.png" alt="Eaglessoft Logo">
+      </a>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="header-content">
+        <h1>XSLT Transformation Service</h1>
+        <p class="subtitle">Transform XML documents with user-provided XSLT 3.0 through a simple web interface</p>
+      </div>
+    </header>
+
+    <main>
+      <div class="upload-section">
+        <div class="card">
+          <h2>Upload and Transform Content</h2>
+
+          <div class="editor-grid">
+            <section class="editor-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>XML Input</h3>
+                  <p>Paste XML content or load it from a local file.</p>
+                </div>
+                <label class="file-button">
+                  <span>Upload XML</span>
+                  <input type="file" id="xmlFile" accept=".xml,text/xml">
+                </label>
+              </div>
+              <textarea id="xmlInput" spellcheck="false"><root>
+  <item>Hello</item>
+</root></textarea>
+            </section>
+
+            <section class="editor-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>XSLT Input</h3>
+                  <p>Paste the stylesheet or load it from a local file.</p>
+                </div>
+                <label class="file-button">
+                  <span>Upload XSLT</span>
+                  <input type="file" id="xsltFile" accept=".xsl,.xslt,text/xml">
+                </label>
+              </div>
+              <textarea id="xsltInput" spellcheck="false"><xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:template match="/">
+    <result>
+      <xsl:value-of select="/root/item"/>
+    </result>
+  </xsl:template>
+</xsl:stylesheet></textarea>
+            </section>
+          </div>
+
+          <button type="button" id="transformButton" class="btn-primary">Run Transformation</button>
+          <p id="requestStatus" class="status-text" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div id="resultPanel" class="result-section">
+        <div class="card">
+          <div class="result-header-row">
+            <div>
+              <h2>Result</h2>
+              <p class="result-subtitle">Successful and failed requests are summarized below.</p>
+            </div>
+            <span id="resultBadge" class="result-badge">Awaiting Request</span>
+          </div>
+          <div id="resultOutput"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="footer-content">
+        <p class="footer-brand">Eaglessoft</p>
+        <p class="footer-tech">Powered by Saxon-HE (Saxonica) | Source: <a href="https://github.com/Saxonica/Saxon-HE/" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a></p>
+      </div>
+    </footer>
+  </div>
+
+  <script defer src="/app.js?v=2.2"></script>
+</body>
+</html>
+
+

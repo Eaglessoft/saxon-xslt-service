@@ -1,0 +1,6 @@
+FROM mcr.microsoft.com/devcontainers/java:1-21-bullseye
+
+# The base devcontainers Java image already includes the required Java tooling.
+EXPOSE 8080
+
+CMD ["bash", "-lc", "sleep infinity"]

@@ -1,0 +1,9 @@
+# Default operational limits for transformation execution.
+# These values can be tuned per environment without changing application code.
+xslt:
+  transformation:
+    timeout: 30s
+    max-xml-size: 10MB
+    max-xslt-size: 2MB
+    max-output-size: 10MB
+
