@@ -1,13 +1,15 @@
 # API Reference
 
+This document defines the public HTTP surface of `saxon-xslt-service`.
+
 ## Base URL
 
-The service paths below are relative to the active host and port.
+The paths below are relative to the active host and port.
 
 Typical local examples:
 
-- `http://localhost:8080` when running directly on the host
-- `http://localhost:8081` when a dev environment forwards container port `8080` to local port `8081`
+- `http://localhost:8080` when running directly on the host or via Docker port mapping
+- `http://localhost:8081` when a development environment forwards container port `8080` to local port `8081`
 
 ## Endpoints
 
@@ -49,9 +51,22 @@ Example success response:
 }
 ```
 
-## Local UI And Embed Paths
+## Validation and Limits
 
-The repository also serves static frontend assets from the same application:
+The service requires both `xml` and `xslt` in every request.
+
+Current defaults:
+
+- XML max size: `10MB`
+- XSLT max size: `2MB`
+- Output max size: `10MB`
+- Timeout: `30s`
+
+These values can be changed through Spring Boot configuration.
+
+## Local UI and Embed Paths
+
+The same application also serves static frontend assets:
 
 - `GET /`
 - `GET /embed/sample.html`
@@ -84,10 +99,3 @@ Common error codes:
 - `TIMEOUT_EXCEEDED`
 - `XSLT_RUNTIME_ERROR`
 - `INTERNAL_SERVER_ERROR`
-
-## Widget Usage Note
-
-The embeddable widget assets at `/embed/xslt-widget.css` and `/embed/xslt-widget.js` call the same `POST /transform` endpoint described here.
-
-
-When publishing the project publicly, replace placeholder domains such as `https://your-domain.example` with the real deployed domain. This can be decided later and does not require changing the API contract.

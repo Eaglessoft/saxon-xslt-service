@@ -1,124 +1,134 @@
-# XSLT Transformation Service
+# Saxon XSLT Service
 
-Stateless Java service for executing XSLT 3.0 transformations over HTTP.
+This project is developed by [Eaglessoft](https://eaglessoft.com/) and uses Saxon-HE (Saxonica) as the transformation engine for XSLT 3.0 transformations over XML.
 
-## Overview
+## Features
 
-The service accepts raw XML and XSLT inputs, runs a single transformation, and returns the result in a JSON response. It also exposes:
+- Transforms XML payloads with user-provided XSLT 3.0 stylesheets.
+- Provides a web UI (`/`) and JSON API endpoints.
+- Exposes reusable embed assets for third-party websites.
+- Returns structured success and error responses.
+- Supports runtime configuration for timeout and size limits through Spring Boot properties and environment variables.
+- Includes Docker, Docker Compose, Kubernetes, devcontainer, and release workflow examples.
 
-- a built-in web UI for local testing
-- embeddable widget assets for third-party websites
-- structured JSON error responses
+## Requirements
 
-## Current Scope
+- Java 21
+- Maven 3.9+
+- Docker
 
-- `POST /transform` endpoint for XML + XSLT input
-- `GET /health` endpoint
-- Built-in UI at `/`
-- Embed demo page at `/embed/sample.html`
-- Embeddable widget assets at `/embed/xslt-widget.js` and `/embed/xslt-widget.css`
-- Structured JSON success and error responses
-- Container and VS Code devcontainer bootstrap
-- Test-first backend workflow
+## Documentation
 
-## Run Locally
+- Development setup and local run flow: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
+- Deployment and runtime examples: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- Contribution rules (issues and PR conditions): [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
+- Technical structure summary: [`docs/TECHNICAL_OVERVIEW.md`](docs/TECHNICAL_OVERVIEW.md)
+- Embed/Web Component integration: [`docs/EMBED_USAGE.md`](docs/EMBED_USAGE.md)
+- API reference: [`docs/API.md`](docs/API.md)
+- Documentation index: [`docs/README.md`](docs/README.md)
+- Infrastructure examples:
+  - Kubernetes: [`infra/k8s-example.yaml`](infra/k8s-example.yaml)
+  - Docker Compose: [`infra/docker-compose.yml`](infra/docker-compose.yml)
+- GitHub Actions release image workflow: [`.github/workflows/container-build.yml`](.github/workflows/container-build.yml)
+
+## Build the Container
+
+```bash
+docker build -t saxon-xslt-service -f Containerfile .
+```
+
+Note: Maven tests are not executed during the container build stage. Run `mvn test` before publishing or releasing the image.
+
+## Run the Container
+
+### 1) Run on the default local port mapping
+
+```bash
+docker run --rm -p 8080:8080 saxon-xslt-service
+```
+
+### 2) Run on a different host port
+
+```bash
+docker run --rm -p 8081:8080 saxon-xslt-service
+```
+
+### 3) Run with custom transformation limits
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e XSLT_TRANSFORMATION_TIMEOUT=45s \
+  -e XSLT_TRANSFORMATION_MAX_OUTPUT_SIZE=5MB \
+  saxon-xslt-service
+```
+
+## Access URLs
+
+Default local mapping (`8080:8080`):
+
+- UI: `http://localhost:8080/`
+- Health: `http://localhost:8080/health`
+- Transform endpoint: `http://localhost:8080/transform`
+- Embed sample: `http://localhost:8080/embed/sample.html`
+- Widget JS: `http://localhost:8080/embed/xslt-widget.js`
+- Widget CSS: `http://localhost:8080/embed/xslt-widget.css`
+
+Alternate host port example (`8081:8080`):
+
+- UI: `http://localhost:8081/`
+- Health: `http://localhost:8081/health`
+- Transform endpoint: `http://localhost:8081/transform`
+- Embed sample: `http://localhost:8081/embed/sample.html`
+
+## API Usage
+
+### 1) Check service health
+
+```bash
+curl -s http://localhost:8080/health
+```
+
+### 2) Submit a transformation request
+
+```bash
+curl -s -X POST "http://localhost:8080/transform" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "xslt": "<xsl:stylesheet version=\"3.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\"><result><xsl:value-of select=\"/root/item\"/></result></xsl:template></xsl:stylesheet>",
+    "xml": "<root><item>Hello</item></root>"
+  }'
+```
+
+## Runtime Configuration
+
+- `SERVER_PORT` (optional, default: `8080`)
+  - Spring Boot HTTP port.
+- `XSLT_TRANSFORMATION_TIMEOUT` (default: `30s`)
+  - Maximum transformation execution time.
+- `XSLT_TRANSFORMATION_MAX_XML_SIZE` (default: `10MB`)
+  - Maximum accepted XML request size.
+- `XSLT_TRANSFORMATION_MAX_XSLT_SIZE` (default: `2MB`)
+  - Maximum accepted XSLT request size.
+- `XSLT_TRANSFORMATION_MAX_OUTPUT_SIZE` (default: `10MB`)
+  - Maximum response payload size.
+
+## Example Runtime Configurations
+
+### Default local run
 
 ```bash
 mvn spring-boot:run
 ```
 
-The application starts on `http://localhost:8080` by default.
-
-If `8080` is already in use, run on a different port:
+### Custom port + timeout
 
 ```bash
-mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"
+SERVER_PORT=8081 XSLT_TRANSFORMATION_TIMEOUT=45s mvn spring-boot:run
 ```
 
-If you are using VS Code dev containers, the service may still run on `8080` inside the container while VS Code forwards it to a different local port such as `http://localhost:8081`.
+## Troubleshooting
 
-## Run Tests
-
-Run the current unit and web-layer test suite with:
-
-```bash
-mvn test
-```
-
-The repository currently includes tests for:
-
-- controller and API behavior
-- validation and limit handling
-- timeout and output limit behavior
-- transformation service flow
-- Saxon transformation engine behavior
-
-## Local URLs
-
-When the application is running locally, check these paths under your active base URL:
-
-- `/`
-- `/health`
-- `/transform`
-- `/embed/sample.html`
-- `/embed/xslt-widget.js`
-- `/embed/xslt-widget.css`
-
-Examples when the default port is free:
-
-- `http://localhost:8080/`
-- `http://localhost:8080/health`
-- `http://localhost:8080/embed/sample.html`
-
-If the application is started on another port, replace `8080` with that port.
-
-## Run With Docker
-
-```bash
-docker build -f Containerfile -t saxon-xslt-service .
-docker run --rm -p 80:8080 saxon-xslt-service
-```
-
-## Embeddable Widget
-
-Third-party pages can reuse the same transformation UI by loading the widget CSS and JS from this service and mounting it into any container element.
-
-Same-origin example:
-
-```html
-<link rel="stylesheet" href="/embed/xslt-widget.css">
-<div id="xslt-widget"></div>
-<script src="/embed/xslt-widget.js"></script>
-<script>
-  window.XsltTransformationWidget.mount({
-    target: "#xslt-widget",
-    endpoint: "/transform"
-  });
-</script>
-```
-
-Cross-origin or production example:
-
-```html
-<link rel="stylesheet" href="https://your-domain.example/embed/xslt-widget.css">
-<div id="xslt-widget"></div>
-<script src="https://your-domain.example/embed/xslt-widget.js"></script>
-<script>
-  window.XsltTransformationWidget.mount({
-    target: "#xslt-widget",
-    endpoint: "https://your-domain.example/transform"
-  });
-</script>
-```
-
-`your-domain.example` is a placeholder. The final public domain can be added after deployment without changing the widget integration pattern.
-
-## Documentation
-
-Project documentation lives under the [`docs`](./docs) directory.
-
-- API reference: [`docs/api.md`](./docs/api.md)
-- Development guide: [`docs/development.md`](./docs/development.md)
-- Deployment guide: [`docs/deployment.md`](./docs/deployment.md)
-- Architecture overview: [`docs/architecture.md`](./docs/architecture.md)
-- Documentation index: [`docs/README.md`](./docs/README.md)
+- If the UI does not open, verify the host port mapping and use `/` as the entry URL.
+- If the embed sample does not transform, make sure the widget is loaded from the same host/port as the API or provide `api-url` / `endpoint` explicitly.
+- If a Docker release workflow fails, verify Docker Hub secrets and repository names in `.github/workflows/container-build.yml`.
+- If local runtime fails on port `8080`, use a different host port or set `SERVER_PORT`.

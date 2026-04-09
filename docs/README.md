@@ -1,19 +1,26 @@
 # Documentation
 
-Project documentation for the current repository layout lives in this directory.
+This directory contains the primary project documentation for `saxon-xslt-service`.
 
-Available documents:
+## Available Documents
 
-- `api.md`: HTTP API, local URLs, widget asset endpoints, and error format
-- `development.md`: local run, test, debug, Docker, and devcontainer workflows
-- `deployment.md`: Docker, Docker Compose, and Kubernetes deployment options
-- `architecture.md`: current application structure and request flow
+- [`API.md`](API.md): HTTP API endpoints, request and response formats, and error model.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): contribution workflow, branching rules, and PR expectations.
+- [`DEVELOPMENT.md`](DEVELOPMENT.md): local development setup, devcontainer usage, Maven commands, and verification flow.
+- [`DEPLOYMENT.md`](DEPLOYMENT.md): Docker, Docker Compose, Kubernetes, and release image workflow guidance.
+- [`EMBED_USAGE.md`](EMBED_USAGE.md): widget integration, API URL behavior, CSS loading, and legacy compatibility.
+- [`TECHNICAL_OVERVIEW.md`](TECHNICAL_OVERVIEW.md): structure, runtime flow, and backend responsibilities.
 
-Important current commands:
+## Quick Commands
 
 ```bash
 mvn test
 mvn spring-boot:run
+docker build -t saxon-xslt-service -f Containerfile .
 ```
 
-Local access points are based on the port where the application is running, typically `http://localhost:8080` unless another port is configured or forwarded by the development environment.
+## Related Infrastructure
+
+- Docker Compose example: [`../infra/docker-compose.yml`](../infra/docker-compose.yml)
+- Kubernetes example: [`../infra/k8s-example.yaml`](../infra/k8s-example.yaml)
+- Release image workflow: [`../.github/workflows/container-build.yml`](../.github/workflows/container-build.yml)
