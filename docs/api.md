@@ -89,4 +89,5 @@ Common error codes:
 
 The embeddable widget assets at `/embed/xslt-widget.css` and `/embed/xslt-widget.js` call the same `POST /transform` endpoint described here.
 
+
 When publishing the project publicly, replace placeholder domains such as `https://your-domain.example` with the real deployed domain. This can be decided later and does not require changing the API contract.
