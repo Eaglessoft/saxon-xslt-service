@@ -90,7 +90,6 @@ Typical files:
 
 - `README.md`
 - `docs/DEVELOPMENT.md`
-- `docs/DEPLOYMENT.md`
 - `docs/EMBED_USAGE.md`
 
 ### 5. Security

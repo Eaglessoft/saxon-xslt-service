@@ -168,7 +168,8 @@ transformButton.addEventListener("click", async () => {
   setResultState("pending", "Processing Request");
 
   try {
-    const response = await fetch("/transform", {
+    // Keep API calls relative so Spring Boot context paths work without custom frontend configuration.
+    const response = await fetch("transform", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

@@ -57,5 +57,5 @@ Short summary of project structure and runtime flow.
 
 - Container runs the packaged application from `/app/app.jar`.
 - Default internal HTTP port is `80`.
-- Health checks should target `/health`.
+- Health checks should target `/health` by default; if `SERVER_SERVLET_CONTEXT_PATH` is set, include that prefix in probe paths.
 - The GitHub Actions release workflow builds and pushes the Docker image when a GitHub Release is published.

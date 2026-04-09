@@ -47,13 +47,13 @@ Note: Maven tests are executed during the container build stage.
 ### 1) Run on the default local port mapping
 
 ```bash
-docker run --rm -p 8080:8080 eaglessoftbv/saxon-xslt-service
+docker run --rm -p 8080:80 eaglessoftbv/saxon-xslt-service
 ```
 
 ### 2) Run on a different host port
 
 ```bash
-docker run --rm -p 8081:8080 eaglessoftbv/saxon-xslt-service
+docker run --rm -p 8081:80 eaglessoftbv/saxon-xslt-service
 ```
 
 ### 3) Run with custom transformation limits
@@ -70,7 +70,7 @@ docker run --rm -p 8080:80 \
 ```bash
 docker run --rm -p 8080:80 \
   -e XSLT_TRANSFORMATION_ALLOWED_ORIGINS="https://site-a.example,https://site-b.example" \
-  saxon-xslt-service
+  eaglessoftbv/saxon-xslt-service
 ```
 
 ## Access URLs
@@ -112,8 +112,10 @@ curl -s -X POST "http://localhost:8080/transform" \
 
 ## Runtime Configuration
 
-- `SERVER_PORT` (optional, default: `8080`)
-  - Spring Boot HTTP port.
+- `SERVER_PORT` (optional)
+  - Local Maven run default: `8080`; container image default: `80`.
+- `SERVER_SERVLET_CONTEXT_PATH` (optional)
+  - Runs the UI and API under a sub-path such as `/xslt-service`.
 - `XSLT_TRANSFORMATION_TIMEOUT` (default: `30s`)
   - Maximum transformation execution time.
 - `XSLT_TRANSFORMATION_MAX_XML_SIZE` (default: `10MB`)
@@ -139,6 +141,12 @@ mvn spring-boot:run
 SERVER_PORT=8081 XSLT_TRANSFORMATION_TIMEOUT=45s mvn spring-boot:run
 ```
 
+### Context path
+
+```bash
+SERVER_SERVLET_CONTEXT_PATH=/xslt-service mvn spring-boot:run
+```
+
 ### Restricted embed origins
 
 ```bash
@@ -152,3 +160,4 @@ XSLT_TRANSFORMATION_ALLOWED_ORIGINS="https://site-a.example,https://site-b.examp
 - If the widget is embedded on a different origin, allow that origin through `XSLT_TRANSFORMATION_ALLOWED_ORIGINS`.
 - If a Docker release workflow fails, verify Docker Hub secrets and repository names in `.github/workflows/container-build.yml`.
 - If local runtime fails on port `8080`, use a different host port or set `SERVER_PORT`.
+- If you run under `SERVER_SERVLET_CONTEXT_PATH`, open the UI from that sub-path, for example `/xslt-service/`.

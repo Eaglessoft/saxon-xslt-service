@@ -12,7 +12,8 @@ WORKDIR /app
 
 COPY --from=build /workspace/target/saxon-xslt-service-0.0.1-SNAPSHOT.jar app.jar
 
-ENV SERVER_PORT=80
+ENV SERVER_PORT=80 \
+    SERVER_SERVLET_CONTEXT_PATH=/
 
 EXPOSE 80
 

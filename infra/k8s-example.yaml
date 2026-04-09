@@ -21,6 +21,9 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          env:
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: "/"
           readinessProbe:
             httpGet:
               path: /health
@@ -59,4 +62,3 @@ spec:
     - name: http
       port: 80
       targetPort: http
-

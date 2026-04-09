@@ -6,5 +6,6 @@ services:
     container_name: saxon-xslt-service
     ports:
       - "80:80"
+    environment:
+      SERVER_SERVLET_CONTEXT_PATH: "/"
     restart: unless-stopped
-
