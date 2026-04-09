@@ -34,7 +34,7 @@ This project is developed by [Eaglessoft](https://eaglessoft.com/) and uses Saxo
 ## Build the Container
 
 ```bash
-docker build -t saxon-xslt-service -f Containerfile .
+docker build -t eaglessoftbv/saxon-xslt-service -f Containerfile .
 ```
 
 Note: Maven tests are not executed during the container build stage. Run `mvn test` before publishing or releasing the image.
@@ -44,13 +44,13 @@ Note: Maven tests are not executed during the container build stage. Run `mvn te
 ### 1) Run on the default local port mapping
 
 ```bash
-docker run --rm -p 8080:8080 saxon-xslt-service
+docker run --rm -p 8080:8080 eaglessoftbv/saxon-xslt-service
 ```
 
 ### 2) Run on a different host port
 
 ```bash
-docker run --rm -p 8081:8080 saxon-xslt-service
+docker run --rm -p 8081:8080 eaglessoftbv/saxon-xslt-service
 ```
 
 ### 3) Run with custom transformation limits
@@ -59,7 +59,7 @@ docker run --rm -p 8081:8080 saxon-xslt-service
 docker run --rm -p 8080:8080 \
   -e XSLT_TRANSFORMATION_TIMEOUT=45s \
   -e XSLT_TRANSFORMATION_MAX_OUTPUT_SIZE=5MB \
-  saxon-xslt-service
+  eaglessoftbv/saxon-xslt-service
 ```
 
 ## Access URLs
