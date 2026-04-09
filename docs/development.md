@@ -97,13 +97,13 @@ The production domain is not fixed in the repository yet. Keep example values su
 Build the image:
 
 ```bash
-docker build -f Containerfile -t xslt-transformation-service .
+docker build -f Containerfile -t saxon-xslt-service .
 ```
 
 Run the container:
 
 ```bash
-docker run --rm -p 80:8080 xslt-transformation-service
+docker run --rm -p 80:8080 saxon-xslt-service
 ```
 
 With that mapping, the service is reachable from the host at:

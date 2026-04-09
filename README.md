@@ -75,8 +75,8 @@ If the application is started on another port, replace `8080` with that port.
 ## Run With Docker
 
 ```bash
-docker build -f Containerfile -t xslt-transformation-service .
-docker run --rm -p 80:8080 xslt-transformation-service
+docker build -f Containerfile -t saxon-xslt-service .
+docker run --rm -p 80:8080 saxon-xslt-service
 ```
 
 ## Embeddable Widget

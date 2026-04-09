@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: xslt-transformation-service
+  name: saxon-xslt-service
   labels:
-    app: xslt-transformation-service
+    app: saxon-xslt-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: xslt-transformation-service
+      app: saxon-xslt-service
   template:
     metadata:
       labels:
-        app: xslt-transformation-service
+        app: saxon-xslt-service
     spec:
       containers:
-        - name: xslt-transformation-service
-          image: eaglessoftbv/xslt-transformation-service:latest
+        - name: saxon-xslt-service
+          image: eaglessoftbv/saxon-xslt-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -55,13 +55,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: xslt-transformation-service
+  name: saxon-xslt-service
   labels:
-    app: xslt-transformation-service
+    app: saxon-xslt-service
 spec:
   type: ClusterIP
   selector:
-    app: xslt-transformation-service
+    app: saxon-xslt-service
   ports:
     - name: http
       port: 80

@@ -11,7 +11,7 @@ The application listens on port `8080` inside the container.
 Build the image from the repository root:
 
 ```bash
-docker build -f Containerfile -t xslt-transformation-service .
+docker build -f Containerfile -t saxon-xslt-service .
 ```
 
 ## Run With Docker
@@ -19,7 +19,7 @@ docker build -f Containerfile -t xslt-transformation-service .
 Run the container directly:
 
 ```bash
-docker run --rm -p 80:8080 xslt-transformation-service
+docker run --rm -p 80:8080 saxon-xslt-service
 ```
 
 With this mapping, the service is reachable on the host at:

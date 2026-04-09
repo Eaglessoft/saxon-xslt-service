@@ -12,9 +12,9 @@
   </parent>
 
   <groupId>com.eaglesoft</groupId>
-  <artifactId>xslt-transformation-service</artifactId>
+  <artifactId>saxon-xslt-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>xslt-transformation-service</name>
+  <name>saxon-xslt-service</name>
   <description>Stateless HTTP service for XSLT 3.0 transformations</description>
 
   <properties>
