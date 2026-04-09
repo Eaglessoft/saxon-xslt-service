@@ -1,18 +1,19 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM maven:3.9.13-eclipse-temurin-25-alpine AS build
 
 WORKDIR /workspace
 
-COPY pom.xml .
-COPY src src
+COPY . .
 
-RUN mvn -q -DskipTests package
+RUN mvn -q package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
 COPY --from=build /workspace/target/saxon-xslt-service-0.0.1-SNAPSHOT.jar app.jar
 
-EXPOSE 8080
+ENV SERVER_PORT=80
+
+EXPOSE 80
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

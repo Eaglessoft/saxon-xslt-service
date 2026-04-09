@@ -5,5 +5,5 @@ xslt:
     timeout: 30s
     max-xml-size: 10MB
     max-xslt-size: 2MB
+    allowed-origins: "*"
     max-output-size: 10MB
-

@@ -6,6 +6,7 @@ package com.eaglesoft.xslttransformationservice.config;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DataSizeUnit;
 import org.springframework.util.unit.DataSize;
@@ -26,6 +27,9 @@ public class XsltTransformationProperties {
   @NotNull
   @DataSizeUnit(DataUnit.BYTES)
   private DataSize maxXsltSize = DataSize.ofMegabytes(2);
+
+  @NotNull
+  private List<String> allowedOrigins = List.of("*");
 
   @NotNull
   @DataSizeUnit(DataUnit.BYTES)
@@ -55,6 +59,14 @@ public class XsltTransformationProperties {
     this.maxXsltSize = maxXsltSize;
   }
 
+  public List<String> getAllowedOrigins() {
+    return allowedOrigins;
+  }
+
+  public void setAllowedOrigins(List<String> allowedOrigins) {
+    this.allowedOrigins = allowedOrigins;
+  }
+
   public DataSize getMaxOutputSize() {
     return maxOutputSize;
   }
@@ -63,4 +75,3 @@ public class XsltTransformationProperties {
     this.maxOutputSize = maxOutputSize;
   }
 }
-

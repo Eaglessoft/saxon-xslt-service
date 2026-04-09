@@ -1,6 +1,6 @@
 /*
  * Exposes a reusable embeddable widget for the XSLT transformation service.
- * Supports custom-element usage, legacy container mounting, and optional automatic CSS loading.
+ * Supports custom-element usage and optional automatic CSS loading.
  */
 (function attachXsltTransformationWidget(globalScope) {
   'use strict';
@@ -77,12 +77,6 @@
   function resolveDefaultTransformEndpoint() {
     return normalizeUrl(resolveAssetUrl('../transform'));
   }
-
-  function resolveScriptApiBaseUrl() {
-    const script = getCurrentScript();
-    return normalizeUrl(script && script.getAttribute('data-api-url'));
-  }
-
   function resolveCssUrl() {
     const script = getCurrentScript();
     if (script) {
@@ -562,13 +556,11 @@
       }
 
       const componentApiUrl = normalizeUrl(this.getAttribute('api-url'));
-      const scriptApiUrl = resolveScriptApiBaseUrl();
-      const script = getCurrentScript();
-      const autoCss = toBoolean(this.getAttribute('auto-css') ?? (script && script.getAttribute('data-auto-css')), true);
+      const autoCss = toBoolean(this.getAttribute('auto-css'), true);
 
       this.__xsltWidgetApi = mount({
         target: this,
-        apiUrl: componentApiUrl || scriptApiUrl || resolveDefaultApiBaseUrl(),
+        apiUrl: componentApiUrl || resolveDefaultApiBaseUrl(),
         endpoint: this.getAttribute('endpoint') || '',
         autoCss,
         title: this.getAttribute('title') || DEFAULT_TITLE,
@@ -585,45 +577,10 @@
     }
   }
 
-  function mountLegacyContainer() {
-    if (document.querySelector('xslt-transformation-widget')) {
-      return;
-    }
-
-    const legacyRoot = document.querySelector('.' + ROOT_CLASS);
-    if (!legacyRoot || legacyRoot.__xsltWidgetMounted) {
-      return;
-    }
-
-    const legacyApiUrl = normalizeUrl(legacyRoot.getAttribute('data-api-url'));
-    const scriptApiUrl = resolveScriptApiBaseUrl();
-    const script = getCurrentScript();
-    const scriptAutoCss = script ? script.getAttribute('data-auto-css') : null;
-    const containerAutoCss = legacyRoot.getAttribute('data-auto-css');
-
-    mount({
-      target: legacyRoot,
-      apiUrl: legacyApiUrl || scriptApiUrl || resolveDefaultApiBaseUrl(),
-      endpoint: legacyRoot.getAttribute('data-endpoint') || '',
-      autoCss: toBoolean(containerAutoCss != null ? containerAutoCss : scriptAutoCss, true),
-      title: legacyRoot.getAttribute('data-title') || DEFAULT_TITLE,
-      subtitle: legacyRoot.getAttribute('data-subtitle') || DEFAULT_SUBTITLE,
-      workspaceTitle: legacyRoot.getAttribute('data-workspace-title') || DEFAULT_WORKSPACE_TITLE,
-      workspaceCopy: legacyRoot.getAttribute('data-workspace-copy') || DEFAULT_WORKSPACE_COPY,
-      buttonLabel: legacyRoot.getAttribute('data-button-label') || DEFAULT_BUTTON_LABEL,
-      brand: legacyRoot.getAttribute('data-brand') || DEFAULT_BRAND,
-      footerText: legacyRoot.getAttribute('data-footer-text') || DEFAULT_FOOTER_TEXT,
-      showFooter: toBoolean(legacyRoot.getAttribute('data-show-footer'), true),
-      xml: legacyRoot.getAttribute('data-xml') || DEFAULT_XML,
-      xslt: legacyRoot.getAttribute('data-xslt') || DEFAULT_XSLT
-    });
-  }
-
   function bootstrap() {
     if (!customElements.get('xslt-transformation-widget')) {
       customElements.define('xslt-transformation-widget', XsltTransformationWidgetElement);
     }
-    mountLegacyContainer();
   }
 
   globalScope.XsltTransformationWidget = {

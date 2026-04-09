@@ -6,7 +6,7 @@ This guide explains how to run the project locally for development using VS Code
 
 - IDE: Visual Studio Code
 - Extension: `Dev Containers` (Microsoft)
-- Java: 21
+- Java: 25
 - Maven: 3.9+
 - Docker: required for container verification
 
@@ -90,6 +90,7 @@ Optional smoke flow:
 1. Run `mvn spring-boot:run`
 2. Open `/`, `/health`, and `/embed/sample.html`
 3. Submit a sample transformation through the UI or widget
+4. If you test the widget from another origin, set `api-url` explicitly and allow that origin through `XSLT_TRANSFORMATION_ALLOWED_ORIGINS`
 
 ## Repository Notes
 

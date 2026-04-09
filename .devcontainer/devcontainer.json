@@ -1,15 +1,8 @@
 {
-  "name": "XSLT Transformation Service Dev",
+  "name": "Saxon XSLT Service Dev",
   "build": {
     "dockerfile": "Containerfile",
     "context": ".."
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/java:1": {
-      "version": "none",
-      "installMaven": "true",
-      "installGradle": "false"
-    }
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/work,type=bind",
   "workspaceFolder": "/work",

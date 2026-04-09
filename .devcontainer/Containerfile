@@ -1,6 +1,13 @@
-FROM mcr.microsoft.com/devcontainers/java:1-21-bullseye
+FROM maven:3.9.13-eclipse-temurin-25-alpine
 
-# The base devcontainers Java image already includes the required Java tooling.
+# Keep the dev container aligned with the production Java/Alpine stack and
+# provide the vscode user expected by the existing devcontainer settings.
+RUN apk add --no-cache bash git shadow sudo \
+    && groupadd -g 1000 vscode \
+    && useradd -m -u 1000 -g 1000 -s /bin/bash vscode \
+    && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
+    && chmod 0440 /etc/sudoers.d/vscode
+
 EXPOSE 8080
 
 CMD ["bash", "-lc", "sleep infinity"]
