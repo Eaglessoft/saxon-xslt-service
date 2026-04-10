@@ -31,7 +31,7 @@ This project is developed by [Eaglessoft](https://eaglessoft.com/) and uses Saxo
 
 ## Repository Notes
 
-- Built-in UI assets live under `src/main/resources/static`.
+- Built-in UI entry template lives under `src/main/resources/ui/index.html`; remaining built-in UI assets live under `src/main/resources/static`.
 - Embed source assets are expected under the repository-root `embed/` folder and are packaged to `/embed/*` during the Maven build.
 
 ## Build the Container

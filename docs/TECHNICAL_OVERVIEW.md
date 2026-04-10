@@ -7,7 +7,9 @@ Short summary of project structure and runtime flow.
 - `src/main/java/com/eaglesoft/xslttransformationservice`
   - Backend Spring Boot application classes, controllers, services, engine, DTOs, config, and exception handling.
 - `src/main/resources/static`
-  - Built-in web UI assets served from `/`.
+  - Built-in web UI assets such as CSS, JS, images, and embed files served from `/`.
+- `src/main/resources/ui`
+  - Main HTML entry template rendered with runtime base-href replacement for context-path support.
 - `src/main/resources`
   - Application configuration (`application.yml`).
 - `src/test/java/com/eaglesoft/xslttransformationservice`
@@ -25,6 +27,8 @@ Short summary of project structure and runtime flow.
 
 - `XsltTransformationServiceApplication`
   - Spring Boot entry point.
+- `IndexController`
+  - Serves the UI entry page and injects the runtime base href for context-path support.
 - `TransformController`
   - Exposes `POST /transform`.
 - `HealthController`
