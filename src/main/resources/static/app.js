@@ -1,6 +1,6 @@
 /*
- * Wires the local UI to the transform API, including file loading and result-state updates.
- * The script keeps browser-side behavior minimal so the API remains the main source of truth.
+ * Wires the local UI to the transform API while keeping the frontend focused on layout, status, uploads,
+ * and a compact two-panel result view.
  */
 const xmlInput = document.getElementById("xmlInput");
 const xsltInput = document.getElementById("xsltInput");
@@ -11,6 +11,18 @@ const resultOutput = document.getElementById("resultOutput");
 const requestStatus = document.getElementById("requestStatus");
 const resultPanel = document.getElementById("resultPanel");
 const resultBadge = document.getElementById("resultBadge");
+const copyResultButton = document.getElementById("copyResultButton");
+const copyTooltip = document.getElementById("copyTooltip");
+const xmlTab = document.getElementById("xmlTab");
+const xsltTab = document.getElementById("xsltTab");
+const xmlUploadControl = document.getElementById("xmlUploadControl");
+const xsltUploadControl = document.getElementById("xsltUploadControl");
+
+const COPY_DEFAULT_LABEL = "Copy";
+const COPY_SUCCESS_LABEL = "Copied";
+
+let latestResultText = "";
+let copyResetTimer;
 
 async function populateFromFile(fileInput, targetTextarea) {
   const file = fileInput.files?.[0];
@@ -30,8 +42,37 @@ function escapeHtml(value) {
       .replace(/'/g, "&#39;");
 }
 
+function setActiveEditor(editor) {
+  const isXml = editor === "xml";
+
+  xmlTab.classList.toggle("is-active", isXml);
+  xsltTab.classList.toggle("is-active", !isXml);
+  xmlTab.setAttribute("aria-selected", String(isXml));
+  xsltTab.setAttribute("aria-selected", String(!isXml));
+
+  xmlInput.classList.toggle("is-hidden", !isXml);
+  xsltInput.classList.toggle("is-hidden", isXml);
+  xmlUploadControl.classList.toggle("is-hidden", !isXml);
+  xsltUploadControl.classList.toggle("is-hidden", isXml);
+}
+
+function resetCopyFeedback(delay = 1600) {
+  window.clearTimeout(copyResetTimer);
+  copyResetTimer = window.setTimeout(() => {
+    copyTooltip.textContent = COPY_DEFAULT_LABEL;
+    copyResultButton.classList.remove("is-feedback");
+  }, delay);
+}
+
+function setCopyButtonState(enabled) {
+  copyResultButton.disabled = !enabled;
+  copyTooltip.textContent = COPY_DEFAULT_LABEL;
+  copyResultButton.classList.remove("is-feedback");
+  window.clearTimeout(copyResetTimer);
+}
+
 function setResultState(state, badgeText) {
-  resultPanel.className = "result-panel card";
+  resultPanel.className = "workspace-panel result-panel";
   resultBadge.className = "result-badge";
   resultBadge.textContent = badgeText;
 
@@ -48,47 +89,13 @@ function setResultState(state, badgeText) {
 
 function setLoadingState(isLoading) {
   transformButton.disabled = isLoading;
-  transformButton.textContent = isLoading ? "Running Transformation..." : "Run Transformation";
-}
-
-function formatXml(xmlText) {
-  const tokens = xmlText
-      .replace(/>\s*</g, "><")
-      .replace(/</g, "~::~<")
-      .split("~::~")
-      .filter(Boolean);
-
-  let formatted = "";
-  let indentLevel = 0;
-
-  for (const token of tokens) {
-    const line = token.trim();
-    if (!line) {
-      continue;
-    }
-
-    if (/^<\//.test(line)) {
-      indentLevel = Math.max(indentLevel - 1, 0);
-    }
-
-    formatted += "  ".repeat(indentLevel) + line + "\n";
-
-    if (/^<[^!?/][^>]*>$/.test(line) && !/\/>$/.test(line) && !/^<[^>]+>.*<\/[^>]+>$/.test(line)) {
-      indentLevel += 1;
-    }
-  }
-
-  return formatted.trim();
+  transformButton.textContent = isLoading ? "Running..." : "Run Transformation";
 }
 
 function formatStructuredText(value) {
   const text = String(value ?? "").trim();
   if (!text) {
     return "";
-  }
-
-  if (text.startsWith("<")) {
-    return formatXml(text);
   }
 
   if (text.startsWith("{") || text.startsWith("[")) {
@@ -103,37 +110,19 @@ function formatStructuredText(value) {
 }
 
 function renderPlaceholder() {
-  resultOutput.innerHTML = [
-    '<div class="result-placeholder">',
-    '  <p class="result-placeholder-title">No response yet</p>',
-    '  <p class="result-placeholder-copy">Run a transformation to see the formatted response here.</p>',
-    '</div>'
-  ].join("\n");
-}
+  latestResultText = "";
+  setCopyButtonState(false);
 
+  resultOutput.innerHTML = "";
+}
 function renderSuccess(responseBody) {
   const formattedResult = formatStructuredText(responseBody.result) || "No result was returned.";
+  latestResultText = String(responseBody.result ?? formattedResult);
+  setCopyButtonState(Boolean(latestResultText));
 
   resultOutput.innerHTML = [
     '<div class="response-shell">',
-    '  <div class="response-metadata">',
-    '    <div class="response-metric">',
-    '      <p class="response-metric-label">Execution Time</p>',
-    '      <p class="response-metric-value">' + escapeHtml(responseBody.metadata?.executionTimeMs ?? "-") + ' ms</p>',
-    '    </div>',
-    '    <div class="response-metric">',
-    '      <p class="response-metric-label">Input Size</p>',
-    '      <p class="response-metric-value">' + escapeHtml(responseBody.metadata?.inputSize ?? "-") + ' bytes</p>',
-    '    </div>',
-    '    <div class="response-metric">',
-    '      <p class="response-metric-label">Output Size</p>',
-    '      <p class="response-metric-value">' + escapeHtml(responseBody.metadata?.outputSize ?? "-") + ' bytes</p>',
-    '    </div>',
-    '  </div>',
-    '  <section class="response-section">',
-    '    <p class="response-section-title">Transformed Result</p>',
-    '    <pre class="response-code">' + escapeHtml(formattedResult) + '</pre>',
-    '  </section>',
+    '  <pre class="response-code">' + escapeHtml(formattedResult) + '</pre>',
     '</div>'
   ].join("\n");
 }
@@ -142,33 +131,67 @@ function renderError(responseBody) {
   const error = responseBody?.error ?? {};
   const details = error.details ? String(error.details) : "No additional details were returned.";
 
+  latestResultText = "";
+  setCopyButtonState(false);
+
   resultOutput.innerHTML = [
     '<div class="response-shell">',
-    '  <dl class="response-error-grid">',
-    '    <dt>Code</dt>',
-    '    <dd>' + escapeHtml(error.code || "UNKNOWN_ERROR") + '</dd>',
-    '    <dt>Message</dt>',
-    '    <dd>' + escapeHtml(error.message || "The service returned an unspecified error.") + '</dd>',
-    '  </dl>',
-    '  <section class="response-section">',
-    '    <p class="response-section-title">Details</p>',
-    '    <pre class="response-code">' + escapeHtml(details) + '</pre>',
-    '  </section>',
+    '  <div class="response-error-card">',
+    '    <p class="response-error-title">Transformation Error</p>',
+    '    <p class="response-error-message">' + escapeHtml(error.message || "The service returned an unspecified error.") + '</p>',
+    '    <p class="response-error-code">Code: ' + escapeHtml(error.code || "UNKNOWN_ERROR") + '</p>',
+    '  </div>',
+    '  <pre class="response-code is-error">' + escapeHtml(details) + '</pre>',
     '</div>'
   ].join("\n");
 }
 
+async function copyResult() {
+  if (!latestResultText) {
+    return;
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(latestResultText);
+    return;
+  }
+
+  const helper = document.createElement("textarea");
+  helper.value = latestResultText;
+  helper.setAttribute("readonly", "readonly");
+  helper.style.position = "absolute";
+  helper.style.left = "-9999px";
+  document.body.appendChild(helper);
+  helper.select();
+  document.execCommand("copy");
+  document.body.removeChild(helper);
+}
+
+xmlTab.addEventListener("click", () => setActiveEditor("xml"));
+xsltTab.addEventListener("click", () => setActiveEditor("xslt"));
 xmlFile.addEventListener("change", () => populateFromFile(xmlFile, xmlInput));
 xsltFile.addEventListener("change", () => populateFromFile(xsltFile, xsltInput));
+copyResultButton.addEventListener("click", async () => {
+  try {
+    await copyResult();
+    copyTooltip.textContent = COPY_SUCCESS_LABEL;
+    copyResultButton.classList.add("is-feedback");
+    resetCopyFeedback();
+  } catch (_error) {
+    copyTooltip.textContent = "Failed";
+    copyResultButton.classList.add("is-feedback");
+    resetCopyFeedback(2200);
+  }
+});
 
 transformButton.addEventListener("click", async () => {
   setLoadingState(true);
+  setCopyButtonState(false);
   requestStatus.textContent = "Running transformation request...";
   requestStatus.className = "status-text";
   setResultState("pending", "Processing Request");
 
   try {
-    // Keep API calls relative so Spring Boot context paths work without custom frontend configuration.
     const response = await fetch("transform", {
       method: "POST",
       headers: {
@@ -184,14 +207,17 @@ transformButton.addEventListener("click", async () => {
 
     if (response.ok) {
       renderSuccess(responseBody);
-      requestStatus.textContent = "Transformation request completed.";
+      const executionTime = responseBody.metadata?.executionTimeMs;
+      requestStatus.textContent = executionTime != null
+          ? `Transformation completed in ${executionTime} ms.`
+          : "Transformation completed.";
       requestStatus.className = "status-text is-success";
-      setResultState("success", "Transformation Result");
+      setResultState("success", "Success");
     } else {
       renderError(responseBody);
-      requestStatus.textContent = "Request failed. Review the error details below.";
+      requestStatus.textContent = "Transformation failed.";
       requestStatus.className = "status-text is-error";
-      setResultState("error", "Error Response");
+      setResultState("error", "Error");
     }
   } catch (error) {
     renderError({
@@ -203,10 +229,11 @@ transformButton.addEventListener("click", async () => {
     });
     requestStatus.textContent = "Request failed before reaching the API.";
     requestStatus.className = "status-text is-error";
-    setResultState("error", "Error Response");
+    setResultState("error", "Error");
   } finally {
     setLoadingState(false);
   }
 });
 
+setActiveEditor("xml");
 renderPlaceholder();

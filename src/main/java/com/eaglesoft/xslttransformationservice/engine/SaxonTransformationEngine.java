@@ -51,9 +51,6 @@ public class SaxonTransformationEngine {
       Xslt30Transformer transformer = executable.load30();
       LimitedOutputWriter outputWriter = new LimitedOutputWriter(maxOutputSizeInBytes);
       Serializer serializer = processor.newSerializer(outputWriter);
-      serializer.setOutputProperty(Serializer.Property.METHOD, "xml");
-      serializer.setOutputProperty(Serializer.Property.OMIT_XML_DECLARATION, "yes");
-      serializer.setOutputProperty(Serializer.Property.INDENT, "no");
       transformer.transform(sourceDocument.asSource(), serializer);
       return outputWriter.toString();
     } catch (SaxonApiException exception) {

@@ -4,21 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Embedded XSLT Transformation Widget</title>
+  <style>html, body { margin: 0; height: 100%; overflow: hidden; background: linear-gradient(180deg, #ffffff 0%, #f5f8fd 100%); } xslt-transformation-widget { display: block; height: 100vh; }</style>
 </head>
 <body>
-  <h1>Example Page with Embedded XSLT Widget</h1>
 
-  <p>This page shows Web Component usage with automatic CSS loading.</p>
 
-  <xslt-transformation-widget></xslt-transformation-widget>
+  <xslt-transformation-widget show-footer="false"></xslt-transformation-widget>
 
   <!-- Custom endpoint example -->
   <!-- <xslt-transformation-widget endpoint="http://localhost:8080/transform"></xslt-transformation-widget> -->
 
   <!-- Optional: disable auto CSS and include CSS manually -->
-  <!-- <link rel="stylesheet" href="/embed/xslt-widget.css"> -->
+  <!-- <link rel="stylesheet" href="/embed/xslt-widget.css?v=5"> -->
   <!-- <xslt-transformation-widget auto-css="false"></xslt-transformation-widget> -->
 
-  <script src="./xslt-widget.js"></script>
+  <script src="./xslt-widget.js?v=5" data-css-url="./xslt-widget.css?v=5"></script>
 </body>
 </html>

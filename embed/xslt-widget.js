@@ -1,6 +1,6 @@
 /*
  * Exposes a reusable embeddable widget for the XSLT transformation service.
- * Supports custom-element usage and optional automatic CSS loading.
+ * Mirrors the main UI layout while keeping the existing embed endpoint and CSS-loading behavior.
  */
 (function attachXsltTransformationWidget(globalScope) {
   'use strict';
@@ -8,12 +8,12 @@
   const ROOT_CLASS = 'xslt-widget';
   const REQUEST_TIMEOUT_MS = 15000;
   const DEFAULT_TITLE = 'XSLT Transformation Service';
-  const DEFAULT_SUBTITLE = 'Transform XML documents with user-provided XSLT 3.0 through a simple web interface';
-  const DEFAULT_WORKSPACE_TITLE = 'Upload and Transform Content';
-  const DEFAULT_WORKSPACE_COPY = 'Provide XML and XSLT content directly or load them from local files.';
+  const DEFAULT_SUBTITLE = '';
   const DEFAULT_BUTTON_LABEL = 'Run Transformation';
   const DEFAULT_BRAND = 'Eaglessoft';
   const DEFAULT_FOOTER_TEXT = 'Powered by Saxon-HE (Saxonica) | Source: <a href="https://github.com/Saxonica/Saxon-HE/" target="_blank" rel="noopener noreferrer" class="xslt-widget__footer-link">GitHub</a>';
+  const COPY_DEFAULT_LABEL = 'Copy';
+  const COPY_SUCCESS_LABEL = 'Copied';
   const DEFAULT_XML = [
     '<root>',
     '  <item>Hello</item>',
@@ -52,7 +52,7 @@
   function resolveScriptBaseUrl() {
     try {
       const script = getCurrentScript();
-      if (script?.src) {
+      if (script && script.src) {
         return new URL('.', script.src).toString();
       }
     } catch (_error) {
@@ -77,6 +77,7 @@
   function resolveDefaultTransformEndpoint() {
     return normalizeUrl(resolveAssetUrl('../transform'));
   }
+
   function resolveCssUrl() {
     const script = getCurrentScript();
     if (script) {
@@ -90,7 +91,7 @@
         try {
           return new URL('xslt-widget.css', src).toString();
         } catch (_error) {
-          // fallback below
+          // Fall through.
         }
       }
     }
@@ -194,44 +195,10 @@
         .finally(() => clearTimeout(timeoutId));
   }
 
-  function formatXml(xmlText) {
-    const tokens = xmlText
-        .replace(/>\s*</g, '><')
-        .replace(/</g, '~::~<')
-        .split('~::~')
-        .filter(Boolean);
-
-    let formatted = '';
-    let indentLevel = 0;
-
-    for (const token of tokens) {
-      const line = token.trim();
-      if (!line) {
-        continue;
-      }
-
-      if (/^<\//.test(line)) {
-        indentLevel = Math.max(indentLevel - 1, 0);
-      }
-
-      formatted += '  '.repeat(indentLevel) + line + '\n';
-
-      if (/^<[^!?/][^>]*>$/.test(line) && !/\/>$/.test(line) && !/^<[^>]+>.*<\/[^>]+>$/.test(line)) {
-        indentLevel += 1;
-      }
-    }
-
-    return formatted.trim();
-  }
-
   function formatStructuredText(value) {
     const text = String(value ?? '').trim();
     if (!text) {
       return '';
-    }
-
-    if (text.startsWith('<')) {
-      return formatXml(text);
     }
 
     if (text.startsWith('{') || text.startsWith('[')) {
@@ -246,7 +213,7 @@
   }
 
   function populateFromFile(fileInput, targetTextarea) {
-    const file = fileInput.files?.[0];
+    const file = fileInput.files && fileInput.files[0];
     if (!file) {
       return Promise.resolve();
     }
@@ -256,72 +223,74 @@
     });
   }
 
+  function setActiveEditor(refs, editor) {
+    const isXml = editor === 'xml';
+
+    refs.xmlTab.classList.toggle('is-active', isXml);
+    refs.xsltTab.classList.toggle('is-active', !isXml);
+    refs.xmlTab.setAttribute('aria-selected', String(isXml));
+    refs.xsltTab.setAttribute('aria-selected', String(!isXml));
+
+    refs.xmlInput.classList.toggle('is-hidden', !isXml);
+    refs.xsltInput.classList.toggle('is-hidden', isXml);
+    refs.xmlUploadControl.classList.toggle('is-hidden', !isXml);
+    refs.xsltUploadControl.classList.toggle('is-hidden', isXml);
+  }
+
   function setResultState(resultPanel, resultBadge, state, badgeText) {
-    resultPanel.className = 'xslt-widget__result-card';
-    resultBadge.className = 'xslt-widget__badge';
+    resultPanel.className = 'xslt-widget__workspace-panel xslt-widget__result-panel';
+    resultBadge.className = 'xslt-widget__result-badge';
     resultBadge.textContent = badgeText;
 
     if (state === 'success') {
+      resultPanel.classList.add('is-success');
       resultBadge.classList.add('is-success');
     }
 
     if (state === 'error') {
+      resultPanel.classList.add('is-error');
       resultBadge.classList.add('is-error');
     }
   }
 
-  function renderPlaceholder(resultOutput) {
-    resultOutput.innerHTML = [
-      '<div class="xslt-widget__placeholder">',
-      '  <p class="xslt-widget__placeholder-title">No response yet</p>',
-      '  <p class="xslt-widget__placeholder-copy">Run a transformation to see the formatted response here.</p>',
-      '</div>'
-    ].join('\n');
+  function setLoadingState(refs, buttonLabel, isLoading) {
+    refs.transformButton.disabled = isLoading;
+    refs.transformButton.textContent = isLoading ? 'Running...' : buttonLabel;
   }
 
-  function renderSuccess(resultOutput, responseBody) {
+  function renderPlaceholder(app) {
+    app.latestResultText = '';
+    app.setCopyButtonState(false);
+    app.refs.resultOutput.innerHTML = '';
+  }
+
+  function renderSuccess(app, responseBody) {
     const formattedResult = formatStructuredText(responseBody.result) || 'No result was returned.';
+    app.latestResultText = String(responseBody.result ?? formattedResult);
+    app.setCopyButtonState(Boolean(app.latestResultText));
 
-    resultOutput.innerHTML = [
+    app.refs.resultOutput.innerHTML = [
       '<div class="xslt-widget__response-shell">',
-      '  <div class="xslt-widget__metadata">',
-      '    <div class="xslt-widget__metric">',
-      '      <p class="xslt-widget__metric-label">Execution Time</p>',
-      '      <p class="xslt-widget__metric-value">' + escapeHtml(responseBody.metadata?.executionTimeMs ?? '-') + ' ms</p>',
-      '    </div>',
-      '    <div class="xslt-widget__metric">',
-      '      <p class="xslt-widget__metric-label">Input Size</p>',
-      '      <p class="xslt-widget__metric-value">' + escapeHtml(responseBody.metadata?.inputSize ?? '-') + ' bytes</p>',
-      '    </div>',
-      '    <div class="xslt-widget__metric">',
-      '      <p class="xslt-widget__metric-label">Output Size</p>',
-      '      <p class="xslt-widget__metric-value">' + escapeHtml(responseBody.metadata?.outputSize ?? '-') + ' bytes</p>',
-      '    </div>',
-      '  </div>',
-      '  <section class="xslt-widget__section">',
-      '    <p class="xslt-widget__section-title">Transformed Result</p>',
-      '    <pre class="xslt-widget__code">' + escapeHtml(formattedResult) + '</pre>',
-      '  </section>',
+      '  <pre class="xslt-widget__response-code">' + escapeHtml(formattedResult) + '</pre>',
       '</div>'
     ].join('\n');
   }
 
-  function renderError(resultOutput, responseBody) {
-    const error = responseBody?.error ?? {};
+  function renderError(app, responseBody) {
+    const error = responseBody && responseBody.error ? responseBody.error : {};
     const details = error.details ? String(error.details) : 'No additional details were returned.';
 
-    resultOutput.innerHTML = [
+    app.latestResultText = '';
+    app.setCopyButtonState(false);
+
+    app.refs.resultOutput.innerHTML = [
       '<div class="xslt-widget__response-shell">',
-      '  <dl class="xslt-widget__error-grid">',
-      '    <dt>Code</dt>',
-      '    <dd>' + escapeHtml(error.code || 'UNKNOWN_ERROR') + '</dd>',
-      '    <dt>Message</dt>',
-      '    <dd>' + escapeHtml(error.message || 'The service returned an unspecified error.') + '</dd>',
-      '  </dl>',
-      '  <section class="xslt-widget__section">',
-      '    <p class="xslt-widget__section-title">Details</p>',
-      '    <pre class="xslt-widget__code">' + escapeHtml(details) + '</pre>',
-      '  </section>',
+      '  <div class="xslt-widget__response-error-card">',
+      '    <p class="xslt-widget__response-error-title">Transformation Error</p>',
+      '    <p class="xslt-widget__response-error-message">' + escapeHtml(error.message || 'The service returned an unspecified error.') + '</p>',
+      '    <p class="xslt-widget__response-error-code">Code: ' + escapeHtml(error.code || 'UNKNOWN_ERROR') + '</p>',
+      '  </div>',
+      '  <pre class="xslt-widget__response-code is-error">' + escapeHtml(details) + '</pre>',
       '</div>'
     ].join('\n');
   }
@@ -340,78 +309,81 @@
   }
 
   function renderWidget(config) {
+    const subtitleHtml = config.subtitle
+        ? '        <p class="xslt-widget__page-subtitle">' + escapeHtml(config.subtitle) + '</p>'
+        : '';
+
     const footerHtml = config.showFooter ? [
-      '  <footer class="xslt-widget__footer">',
-      '    <p class="xslt-widget__footer-brand">' + escapeHtml(config.brand) + '</p>',
-      '    <p class="xslt-widget__footer-tech">' + config.footerText + '</p>',
-      '  </footer>'
+      '    <footer class="xslt-widget__footer">',
+      '      <div class="xslt-widget__footer-content">',
+      '        <p class="xslt-widget__footer-brand">' + escapeHtml(config.brand) + '</p>',
+      '        <p class="xslt-widget__footer-tech">' + config.footerText + '</p>',
+      '      </div>',
+      '    </footer>'
     ].join('\n') : '';
 
     return [
       '<div class="xslt-widget__shell">',
-      '  <header class="xslt-widget__header">',
-      '    <h2 class="xslt-widget__title">' + escapeHtml(config.title) + '</h2>',
-      '    <p class="xslt-widget__subtitle">' + escapeHtml(config.subtitle) + '</p>',
-      '  </header>',
-      '  <section class="xslt-widget__card">',
-      '    <div class="xslt-widget__workspace-head">',
-      '      <h3 class="xslt-widget__workspace-title">' + escapeHtml(config.workspaceTitle) + '</h3>',
-      '      <p class="xslt-widget__workspace-copy">' + escapeHtml(config.workspaceCopy) + '</p>',
-      '    </div>',
-      '    <div class="xslt-widget__grid">',
-      '      <section class="xslt-widget__panel">',
-      '        <div class="xslt-widget__panel-header">',
-      '          <div>',
-      '            <h4 class="xslt-widget__panel-title">XML Input</h4>',
-      '            <p class="xslt-widget__panel-copy">Paste XML content or load it from a local file.</p>',
-      '          </div>',
-      '          <label class="xslt-widget__file-button">',
-      '            <span>Upload XML</span>',
-      '            <input type="file" accept=".xml,text/xml" data-role="xml-file">',
-      '          </label>',
-      '        </div>',
-      '        <textarea class="xslt-widget__textarea" spellcheck="false" data-role="xml-input">' + escapeHtml(config.xml) + '</textarea>',
-      '      </section>',
-      '      <section class="xslt-widget__panel">',
-      '        <div class="xslt-widget__panel-header">',
-      '          <div>',
-      '            <h4 class="xslt-widget__panel-title">XSLT Input</h4>',
-      '            <p class="xslt-widget__panel-copy">Paste the stylesheet or load it from a local file.</p>',
-      '          </div>',
-      '          <label class="xslt-widget__file-button">',
-      '            <span>Upload XSLT</span>',
-      '            <input type="file" accept=".xsl,.xslt,text/xml" data-role="xslt-file">',
-      '          </label>',
-      '        </div>',
-      '        <textarea class="xslt-widget__textarea" spellcheck="false" data-role="xslt-input">' + escapeHtml(config.xslt) + '</textarea>',
-      '      </section>',
-      '    </div>',
-      '    <div class="xslt-widget__actions">',
-      '      <button class="xslt-widget__button" type="button" data-role="transform-button">' + escapeHtml(config.buttonLabel) + '</button>',
-      '      <p class="xslt-widget__status" data-role="request-status" aria-live="polite"></p>',
-      '    </div>',
-      '  </section>',
-      '  <section class="xslt-widget__result-section">',
-      '    <div class="xslt-widget__result-card" data-role="result-panel">',
-      '      <div class="xslt-widget__result-header">',
-      '        <div>',
-      '          <h3 class="xslt-widget__result-title">Result</h3>',
-      '          <p class="xslt-widget__result-copy">Successful and failed requests are summarized below.</p>',
-      '        </div>',
-      '        <span class="xslt-widget__badge" data-role="result-badge">Awaiting Request</span>',
+      '  <div class="xslt-widget__container">',
+      '    <header class="xslt-widget__page-header">',
+      '      <div class="xslt-widget__header-content">',
+      '        <h2 class="xslt-widget__page-title">' + escapeHtml(config.title) + '</h2>',
+      subtitleHtml,
       '      </div>',
-      '      <div class="xslt-widget__output" data-role="result-output"></div>',
-      '    </div>',
-      '  </section>',
+      '    </header>',
+      '    <main class="xslt-widget__workspace-layout">',
+      '      <div class="xslt-widget__workspace-shell">',
+      '        <section class="xslt-widget__workspace-panel xslt-widget__editor-panel">',
+      '          <div class="xslt-widget__panel-header xslt-widget__editor-header">',
+      '            <div class="xslt-widget__tab-strip" role="tablist" aria-label="Editor mode">',
+      '              <button type="button" class="xslt-widget__tab-button is-active" data-role="xml-tab" role="tab" aria-selected="true">XML Input</button>',
+      '              <button type="button" class="xslt-widget__tab-button" data-role="xslt-tab" role="tab" aria-selected="false">XSL Stylesheet</button>',
+      '            </div>',
+      '            <div class="xslt-widget__panel-actions">',
+      '              <label class="xslt-widget__upload-button" data-role="xml-upload-control">',
+      '                <span>Upload XML</span>',
+      '                <input type="file" accept=".xml,text/xml" data-role="xml-file">',
+      '              </label>',
+      '              <label class="xslt-widget__upload-button is-hidden" data-role="xslt-upload-control">',
+      '                <span>Upload XSLT</span>',
+      '                <input type="file" accept=".xsl,.xslt,text/xml" data-role="xslt-file">',
+      '              </label>',
+      '              <button type="button" class="xslt-widget__btn-primary" data-role="transform-button">' + escapeHtml(config.buttonLabel) + '</button>',
+      '            </div>',
+      '          </div>',
+      '          <div class="xslt-widget__editor-stack">',
+      '            <textarea class="xslt-widget__editor-textarea" spellcheck="false" data-role="xml-input">' + escapeHtml(config.xml) + '</textarea>',
+      '            <textarea class="xslt-widget__editor-textarea is-hidden" spellcheck="false" data-role="xslt-input">' + escapeHtml(config.xslt) + '</textarea>',
+      '          </div>',
+      '        </section>',
+      '        <section class="xslt-widget__workspace-panel xslt-widget__result-panel" data-role="result-panel">',
+      '          <div class="xslt-widget__panel-header xslt-widget__result-header">',
+      '            <div class="xslt-widget__result-title-row">',
+      '              <span class="xslt-widget__panel-title">Result</span>',
+      '              <span class="xslt-widget__result-badge" data-role="result-badge">Awaiting Request</span>',
+      '              <span class="xslt-widget__status-text" data-role="request-status" aria-live="polite">Run a transformation to see the latest result.</span>',
+      '            </div>',
+      '            <button type="button" class="xslt-widget__copy-button" data-role="copy-result-button" disabled aria-label="Copy result">',
+      '              <span class="xslt-widget__copy-icon" aria-hidden="true"></span>',
+      '              <span class="xslt-widget__copy-tooltip" data-role="copy-tooltip">' + COPY_DEFAULT_LABEL + '</span>',
+      '            </button>',
+      '          </div>',
+      '          <div class="xslt-widget__result-output" data-role="result-output"></div>',
+      '        </section>',
+      '      </div>',
+      '    </main>',
       footerHtml,
+      '  </div>',
       '</div>'
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   }
 
   class XsltWidgetApp {
     constructor(rootContainer, options) {
       this.root = rootContainer;
       this.config = options;
+      this.latestResultText = '';
+      this.copyResetTimer = null;
     }
 
     mount() {
@@ -419,7 +391,9 @@
       this.root.innerHTML = renderWidget(this.config);
       this.collectRefs();
       this.bindEvents();
-      renderPlaceholder(this.refs.resultOutput);
+      setActiveEditor(this.refs, 'xml');
+      setResultState(this.refs.resultPanel, this.refs.resultBadge, 'pending', 'Awaiting Request');
+      renderPlaceholder(this);
     }
 
     collectRefs() {
@@ -428,71 +402,137 @@
         xsltInput: this.root.querySelector('[data-role="xslt-input"]'),
         xmlFile: this.root.querySelector('[data-role="xml-file"]'),
         xsltFile: this.root.querySelector('[data-role="xslt-file"]'),
+        xmlTab: this.root.querySelector('[data-role="xml-tab"]'),
+        xsltTab: this.root.querySelector('[data-role="xslt-tab"]'),
+        xmlUploadControl: this.root.querySelector('[data-role="xml-upload-control"]'),
+        xsltUploadControl: this.root.querySelector('[data-role="xslt-upload-control"]'),
         transformButton: this.root.querySelector('[data-role="transform-button"]'),
         requestStatus: this.root.querySelector('[data-role="request-status"]'),
         resultPanel: this.root.querySelector('[data-role="result-panel"]'),
         resultBadge: this.root.querySelector('[data-role="result-badge"]'),
-        resultOutput: this.root.querySelector('[data-role="result-output"]')
+        resultOutput: this.root.querySelector('[data-role="result-output"]'),
+        copyResultButton: this.root.querySelector('[data-role="copy-result-button"]'),
+        copyTooltip: this.root.querySelector('[data-role="copy-tooltip"]')
       };
     }
 
     bindEvents() {
+      this.refs.xmlTab.addEventListener('click', () => setActiveEditor(this.refs, 'xml'));
+      this.refs.xsltTab.addEventListener('click', () => setActiveEditor(this.refs, 'xslt'));
       this.refs.xmlFile.addEventListener('change', () => populateFromFile(this.refs.xmlFile, this.refs.xmlInput));
       this.refs.xsltFile.addEventListener('change', () => populateFromFile(this.refs.xsltFile, this.refs.xsltInput));
       this.refs.transformButton.addEventListener('click', () => this.handleTransform());
+      this.refs.copyResultButton.addEventListener('click', () => this.handleCopy());
     }
 
-    async handleTransform() {
-      this.refs.transformButton.disabled = true;
+    resetCopyFeedback(delay) {
+      const effectiveDelay = typeof delay === 'number' ? delay : 1600;
+      window.clearTimeout(this.copyResetTimer);
+      this.copyResetTimer = window.setTimeout(() => {
+        this.refs.copyTooltip.textContent = COPY_DEFAULT_LABEL;
+        this.refs.copyResultButton.classList.remove('is-feedback');
+      }, effectiveDelay);
+    }
+
+    setCopyButtonState(enabled) {
+      this.refs.copyResultButton.disabled = !enabled;
+      this.refs.copyTooltip.textContent = COPY_DEFAULT_LABEL;
+      this.refs.copyResultButton.classList.remove('is-feedback');
+      window.clearTimeout(this.copyResetTimer);
+    }
+
+    copyResult() {
+      if (!this.latestResultText) {
+        return Promise.resolve();
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(this.latestResultText);
+      }
+
+      const helper = document.createElement('textarea');
+      helper.value = this.latestResultText;
+      helper.setAttribute('readonly', 'readonly');
+      helper.style.position = 'absolute';
+      helper.style.left = '-9999px';
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand('copy');
+      document.body.removeChild(helper);
+      return Promise.resolve();
+    }
+
+    handleCopy() {
+      return this.copyResult()
+          .then(() => {
+            this.refs.copyTooltip.textContent = COPY_SUCCESS_LABEL;
+            this.refs.copyResultButton.classList.add('is-feedback');
+            this.resetCopyFeedback(1600);
+          })
+          .catch(() => {
+            this.refs.copyTooltip.textContent = 'Failed';
+            this.refs.copyResultButton.classList.add('is-feedback');
+            this.resetCopyFeedback(2200);
+          });
+    }
+
+    handleTransform() {
+      setLoadingState(this.refs, this.config.buttonLabel, true);
+      this.setCopyButtonState(false);
       this.refs.requestStatus.textContent = 'Running transformation request...';
-      this.refs.requestStatus.className = 'xslt-widget__status';
+      this.refs.requestStatus.className = 'xslt-widget__status-text';
       setResultState(this.refs.resultPanel, this.refs.resultBadge, 'pending', 'Processing Request');
 
-      try {
-        const response = await requestJson(this.config.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            xml: this.refs.xmlInput.value,
-            xslt: this.refs.xsltInput.value
+      return requestJson(this.config.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          xml: this.refs.xmlInput.value,
+          xslt: this.refs.xsltInput.value
+        })
+      })
+          .then((response) => {
+            if (response.ok) {
+              renderSuccess(this, response.data);
+              const executionTime = response.data.metadata && response.data.metadata.executionTimeMs;
+              this.refs.requestStatus.textContent = executionTime != null
+                  ? 'Transformation completed in ' + executionTime + ' ms.'
+                  : 'Transformation completed.';
+              this.refs.requestStatus.className = 'xslt-widget__status-text is-success';
+              setResultState(this.refs.resultPanel, this.refs.resultBadge, 'success', 'Success');
+            } else {
+              renderError(this, response.data);
+              this.refs.requestStatus.textContent = 'Transformation failed.';
+              this.refs.requestStatus.className = 'xslt-widget__status-text is-error';
+              setResultState(this.refs.resultPanel, this.refs.resultBadge, 'error', 'Error');
+            }
           })
-        });
-
-        if (response.ok) {
-          renderSuccess(this.refs.resultOutput, response.data);
-          this.refs.requestStatus.textContent = 'Transformation request completed.';
-          this.refs.requestStatus.className = 'xslt-widget__status is-success';
-          setResultState(this.refs.resultPanel, this.refs.resultBadge, 'success', 'Transformation Result');
-        } else {
-          renderError(this.refs.resultOutput, response.data);
-          this.refs.requestStatus.textContent = 'Request failed. Review the error details below.';
-          this.refs.requestStatus.className = 'xslt-widget__status is-error';
-          setResultState(this.refs.resultPanel, this.refs.resultBadge, 'error', 'Error Response');
-        }
-      } catch (error) {
-        renderError(this.refs.resultOutput, {
-          error: {
-            code: 'NETWORK_ERROR',
-            message: 'Request could not be completed',
-            details: error.message
-          }
-        });
-        this.refs.requestStatus.textContent = 'Request failed before reaching the API.';
-        this.refs.requestStatus.className = 'xslt-widget__status is-error';
-        setResultState(this.refs.resultPanel, this.refs.resultBadge, 'error', 'Error Response');
-      } finally {
-        this.refs.transformButton.disabled = false;
-      }
+          .catch((error) => {
+            renderError(this, {
+              error: {
+                code: 'NETWORK_ERROR',
+                message: 'Request could not be completed',
+                details: error.message
+              }
+            });
+            this.refs.requestStatus.textContent = 'Request failed before reaching the API.';
+            this.refs.requestStatus.className = 'xslt-widget__status-text is-error';
+            setResultState(this.refs.resultPanel, this.refs.resultBadge, 'error', 'Error');
+          })
+          .finally(() => {
+            setLoadingState(this.refs, this.config.buttonLabel, false);
+          });
     }
 
-    setValue(nextValues = {}) {
-      if (typeof nextValues.xml === 'string') {
-        this.refs.xmlInput.value = nextValues.xml;
+    setValue(nextValues) {
+      const values = nextValues || {};
+      if (typeof values.xml === 'string') {
+        this.refs.xmlInput.value = values.xml;
       }
-      if (typeof nextValues.xslt === 'string') {
-        this.refs.xsltInput.value = nextValues.xslt;
+      if (typeof values.xslt === 'string') {
+        this.refs.xsltInput.value = values.xslt;
       }
     }
 
@@ -502,28 +542,33 @@
         xslt: this.refs.xsltInput.value
       };
     }
+
+    destroy() {
+      window.clearTimeout(this.copyResetTimer);
+      this.root.innerHTML = '';
+      this.root.classList.remove(ROOT_CLASS);
+    }
   }
 
-  function normalizeOptions(options = {}) {
-    const target = resolveTarget(options.target);
-    const apiBaseUrl = normalizeUrl(options.apiUrl || options.apiBaseUrl || options.baseUrl || resolveDefaultApiBaseUrl());
-    const endpoint = buildEndpoint(apiBaseUrl, options.endpoint);
+  function normalizeOptions(options) {
+    const normalizedOptions = options || {};
+    const target = resolveTarget(normalizedOptions.target);
+    const apiBaseUrl = normalizeUrl(normalizedOptions.apiUrl || normalizedOptions.apiBaseUrl || normalizedOptions.baseUrl || resolveDefaultApiBaseUrl());
+    const endpoint = buildEndpoint(apiBaseUrl, normalizedOptions.endpoint);
 
     return {
-      target,
-      apiBaseUrl,
-      endpoint,
-      autoCss: toBoolean(options.autoCss, true),
-      title: typeof options.title === 'string' && options.title.trim() ? options.title.trim() : DEFAULT_TITLE,
-      subtitle: typeof options.subtitle === 'string' && options.subtitle.trim() ? options.subtitle.trim() : DEFAULT_SUBTITLE,
-      workspaceTitle: typeof options.workspaceTitle === 'string' && options.workspaceTitle.trim() ? options.workspaceTitle.trim() : DEFAULT_WORKSPACE_TITLE,
-      workspaceCopy: typeof options.workspaceCopy === 'string' && options.workspaceCopy.trim() ? options.workspaceCopy.trim() : DEFAULT_WORKSPACE_COPY,
-      buttonLabel: typeof options.buttonLabel === 'string' && options.buttonLabel.trim() ? options.buttonLabel.trim() : DEFAULT_BUTTON_LABEL,
-      brand: typeof options.brand === 'string' && options.brand.trim() ? options.brand.trim() : DEFAULT_BRAND,
-      footerText: typeof options.footerText === 'string' && options.footerText.trim() ? options.footerText.trim() : DEFAULT_FOOTER_TEXT,
-      showFooter: toBoolean(options.showFooter, true),
-      xml: typeof options.xml === 'string' ? options.xml : DEFAULT_XML,
-      xslt: typeof options.xslt === 'string' ? options.xslt : DEFAULT_XSLT
+      target: target,
+      apiBaseUrl: apiBaseUrl,
+      endpoint: endpoint,
+      autoCss: toBoolean(normalizedOptions.autoCss, true),
+      title: typeof normalizedOptions.title === 'string' && normalizedOptions.title.trim() ? normalizedOptions.title.trim() : DEFAULT_TITLE,
+      subtitle: typeof normalizedOptions.subtitle === 'string' ? normalizedOptions.subtitle.trim() : DEFAULT_SUBTITLE,
+      buttonLabel: typeof normalizedOptions.buttonLabel === 'string' && normalizedOptions.buttonLabel.trim() ? normalizedOptions.buttonLabel.trim() : DEFAULT_BUTTON_LABEL,
+      brand: typeof normalizedOptions.brand === 'string' && normalizedOptions.brand.trim() ? normalizedOptions.brand.trim() : DEFAULT_BRAND,
+      footerText: typeof normalizedOptions.footerText === 'string' && normalizedOptions.footerText.trim() ? normalizedOptions.footerText.trim() : DEFAULT_FOOTER_TEXT,
+      showFooter: toBoolean(normalizedOptions.showFooter, false),
+      xml: typeof normalizedOptions.xml === 'string' ? normalizedOptions.xml : DEFAULT_XML,
+      xslt: typeof normalizedOptions.xslt === 'string' ? normalizedOptions.xslt : DEFAULT_XSLT
     };
   }
 
@@ -539,11 +584,14 @@
       target: config.target,
       apiBaseUrl: config.apiBaseUrl,
       endpoint: config.endpoint,
-      getValue: () => app.getValue(),
-      setValue: (nextValues) => app.setValue(nextValues),
-      destroy() {
-        config.target.innerHTML = '';
-        config.target.classList.remove(ROOT_CLASS);
+      getValue: function getValue() {
+        return app.getValue();
+      },
+      setValue: function setValue(nextValues) {
+        app.setValue(nextValues);
+      },
+      destroy: function destroy() {
+        app.destroy();
         delete config.target.__xsltWidgetMounted;
       }
     };
@@ -562,18 +610,23 @@
         target: this,
         apiUrl: componentApiUrl || resolveDefaultApiBaseUrl(),
         endpoint: this.getAttribute('endpoint') || '',
-        autoCss,
+        autoCss: autoCss,
         title: this.getAttribute('title') || DEFAULT_TITLE,
         subtitle: this.getAttribute('subtitle') || DEFAULT_SUBTITLE,
-        workspaceTitle: this.getAttribute('workspace-title') || DEFAULT_WORKSPACE_TITLE,
-        workspaceCopy: this.getAttribute('workspace-copy') || DEFAULT_WORKSPACE_COPY,
         buttonLabel: this.getAttribute('button-label') || DEFAULT_BUTTON_LABEL,
         brand: this.getAttribute('brand') || DEFAULT_BRAND,
         footerText: this.getAttribute('footer-text') || DEFAULT_FOOTER_TEXT,
-        showFooter: toBoolean(this.getAttribute('show-footer'), true),
+        showFooter: toBoolean(this.getAttribute('show-footer'), false),
         xml: this.getAttribute('xml') || DEFAULT_XML,
         xslt: this.getAttribute('xslt') || DEFAULT_XSLT
       });
+    }
+
+    disconnectedCallback() {
+      if (this.__xsltWidgetApi) {
+        this.__xsltWidgetApi.destroy();
+        this.__xsltWidgetApi = null;
+      }
     }
   }
 
@@ -584,7 +637,7 @@
   }
 
   globalScope.XsltTransformationWidget = {
-    mount
+    mount: mount
   };
 
   if (document.readyState === 'loading') {

@@ -8,7 +8,7 @@
   <meta name="description" content="Transform XML documents with user-provided XSLT 3.0 through a simple web interface.">
   <link rel="icon" type="image/svg+xml" href="FAVICON.svg">
   <link rel="apple-touch-icon" href="Varlik-7.png">
-  <link rel="stylesheet" href="app.css?v=2.2">
+  <link rel="stylesheet" href="app.css?v=3.0">
 </head>
 <body>
   <div class="top-bar">
@@ -19,73 +19,65 @@
     </div>
   </div>
 
-  <div class="container">
-    <header>
+  <div class="container workspace-container">
+    <header class="page-header">
       <div class="header-content">
         <h1>XSLT Transformation Service</h1>
-        <p class="subtitle">Transform XML documents with user-provided XSLT 3.0 through a simple web interface</p>
       </div>
     </header>
 
-    <main>
-      <div class="upload-section">
-        <div class="card">
-          <h2>Upload and Transform Content</h2>
+    <main class="workspace-layout">
+      <div class="workspace-shell">
+        <section class="workspace-panel editor-panel">
+          <div class="panel-header editor-header">
+            <div class="tab-strip" role="tablist" aria-label="Editor mode">
+              <button type="button" id="xmlTab" class="tab-button is-active" data-editor="xml" role="tab" aria-selected="true">XML Input</button>
+              <button type="button" id="xsltTab" class="tab-button" data-editor="xslt" role="tab" aria-selected="false">XSL Stylesheet</button>
+            </div>
 
-          <div class="editor-grid">
-            <section class="editor-panel">
-              <div class="panel-header">
-                <div>
-                  <h3>XML Input</h3>
-                  <p>Paste XML content or load it from a local file.</p>
-                </div>
-                <label class="file-button">
-                  <span>Upload XML</span>
-                  <input type="file" id="xmlFile" accept=".xml,text/xml">
-                </label>
-              </div>
-              <textarea id="xmlInput" spellcheck="false"><root>
+            <div class="panel-actions">
+              <label id="xmlUploadControl" class="upload-button">
+                <span>Upload XML</span>
+                <input type="file" id="xmlFile" accept=".xml,text/xml">
+              </label>
+              <label id="xsltUploadControl" class="upload-button is-hidden">
+                <span>Upload XSLT</span>
+                <input type="file" id="xsltFile" accept=".xsl,.xslt,text/xml">
+              </label>
+              <button type="button" id="transformButton" class="btn-primary">Run Transformation</button>
+            </div>
+          </div>
+
+          <div class="editor-stack">
+            <textarea id="xmlInput" class="editor-textarea" spellcheck="false"><root>
   <item>Hello</item>
 </root></textarea>
-            </section>
-
-            <section class="editor-panel">
-              <div class="panel-header">
-                <div>
-                  <h3>XSLT Input</h3>
-                  <p>Paste the stylesheet or load it from a local file.</p>
-                </div>
-                <label class="file-button">
-                  <span>Upload XSLT</span>
-                  <input type="file" id="xsltFile" accept=".xsl,.xslt,text/xml">
-                </label>
-              </div>
-              <textarea id="xsltInput" spellcheck="false"><xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <textarea id="xsltInput" class="editor-textarea is-hidden" spellcheck="false"><xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:template match="/">
     <result>
       <xsl:value-of select="/root/item"/>
     </result>
   </xsl:template>
 </xsl:stylesheet></textarea>
-            </section>
           </div>
+        </section>
 
-          <button type="button" id="transformButton" class="btn-primary">Run Transformation</button>
-          <p id="requestStatus" class="status-text" aria-live="polite"></p>
-        </div>
-      </div>
-
-      <div id="resultPanel" class="result-section">
-        <div class="card">
-          <div class="result-header-row">
-            <div>
-              <h2>Result</h2>
-              <p class="result-subtitle">Successful and failed requests are summarized below.</p>
+        <section id="resultPanel" class="workspace-panel result-panel">
+          <div class="panel-header result-header">
+            <div class="result-title-row">
+              <span class="panel-title">Result</span>
+              <span id="resultBadge" class="result-badge">Awaiting Request</span>
+              <span id="requestStatus" class="status-text" aria-live="polite">Run a transformation to see the latest result.</span>
             </div>
-            <span id="resultBadge" class="result-badge">Awaiting Request</span>
+
+            <button type="button" id="copyResultButton" class="copy-button" disabled aria-label="Copy result">
+              <span class="copy-icon" aria-hidden="true"></span>
+              <span id="copyTooltip" class="copy-tooltip">Copy</span>
+            </button>
           </div>
-          <div id="resultOutput"></div>
-        </div>
+
+          <div id="resultOutput" class="result-output"></div>
+        </section>
       </div>
     </main>
 
@@ -97,6 +89,6 @@
     </footer>
   </div>
 
-  <script defer src="app.js?v=2.2"></script>
+  <script defer src="app.js?v=3.0"></script>
 </body>
 </html>
