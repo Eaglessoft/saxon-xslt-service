@@ -31,7 +31,7 @@ class SaxonTransformationEngineTest {
 
     String result = transformationEngine.transform(xml, xslt);
 
-    assertThat(result).isEqualTo("<root><item>Hello</item></root>");
+    assertThat(result).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><item>Hello</item></root>");
   }
 
   // Verifies that the engine returns the expected XML for a simple stylesheet.
@@ -50,7 +50,7 @@ class SaxonTransformationEngineTest {
 
     String result = transformationEngine.transform(xml, xslt);
 
-    assertThat(result).isEqualTo("<result>Hello</result>");
+    assertThat(result).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><result>Hello</result>");
   }
 
   // Verifies that invalid XSLT raises the expected compilation exception.

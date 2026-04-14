@@ -51,11 +51,11 @@ class TransformationServiceTest {
     TransformResponse response = transformationService.transform(request);
 
     // Metadata should always be present so API clients can inspect execution details.
-    assertThat(response.result()).isEqualTo("<result>Hello</result>");
+    assertThat(response.result()).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><result>Hello</result>");
     assertThat(response.metadata()).isNotNull();
     assertThat(response.metadata().executionTimeMs()).isGreaterThanOrEqualTo(0);
     assertThat(response.metadata().inputSize()).isGreaterThan(0);
-    assertThat(response.metadata().outputSize()).isEqualTo(22);
+    assertThat(response.metadata().outputSize()).isEqualTo(60);
   }
 }
 

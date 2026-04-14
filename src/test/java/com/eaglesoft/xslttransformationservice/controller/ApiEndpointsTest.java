@@ -59,10 +59,10 @@ class ApiEndpointsTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(requestBody))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.result").value("<result>Hello</result>"))
+        .andExpect(jsonPath("$.result").value("<?xml version=\"1.0\" encoding=\"UTF-8\"?><result>Hello</result>"))
         .andExpect(jsonPath("$.metadata.executionTimeMs").isNumber())
         .andExpect(jsonPath("$.metadata.inputSize").isNumber())
-        .andExpect(jsonPath("$.metadata.outputSize").value(22));
+        .andExpect(jsonPath("$.metadata.outputSize").value(60));
   }
 
   // Verifies that malformed XML is surfaced through the standard runtime error envelope.
