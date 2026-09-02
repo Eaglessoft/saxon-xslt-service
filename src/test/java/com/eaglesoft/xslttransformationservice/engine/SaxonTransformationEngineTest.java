@@ -29,9 +29,10 @@ class SaxonTransformationEngineTest {
         </xsl:stylesheet>
         """;
 
-    String result = transformationEngine.transform(xml, xslt);
+    SaxonTransformationEngine.Output result = transformationEngine.transform(xml, xslt);
 
-    assertThat(result).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><item>Hello</item></root>");
+    assertThat(result.text()).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><item>Hello</item></root>");
+    assertThat(result.method()).isEqualTo("xml");
   }
 
   // Verifies that the engine returns the expected XML for a simple stylesheet.
@@ -48,9 +49,30 @@ class SaxonTransformationEngineTest {
         </xsl:stylesheet>
         """;
 
-    String result = transformationEngine.transform(xml, xslt);
+    SaxonTransformationEngine.Output result = transformationEngine.transform(xml, xslt);
 
-    assertThat(result).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><result>Hello</result>");
+    assertThat(result.text()).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?><result>Hello</result>");
+    assertThat(result.method()).isEqualTo("xml");
+  }
+
+  // Verifies that an HTML stylesheet reports its serialization method, which is what
+  // lets the UI offer a rendered preview instead of guessing from the output text.
+  @Test
+  void transformReportsHtmlOutputMethod() {
+    String xml = "<root><item>Hello</item></root>";
+    String xslt = """
+        <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:output method="html"/>
+          <xsl:template match="/">
+            <html><body><p><xsl:value-of select="/root/item"/></p></body></html>
+          </xsl:template>
+        </xsl:stylesheet>
+        """;
+
+    SaxonTransformationEngine.Output result = transformationEngine.transform(xml, xslt);
+
+    assertThat(result.method()).isEqualTo("html");
+    assertThat(result.text()).contains("<p>Hello</p>");
   }
 
   // Verifies that invalid XSLT raises the expected compilation exception.

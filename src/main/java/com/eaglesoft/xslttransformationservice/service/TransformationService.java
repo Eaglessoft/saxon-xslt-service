@@ -44,21 +44,21 @@ public class TransformationService {
     requestValidator.validate(request);
 
     long startedAt = System.nanoTime();
-    String result = executeWithTimeout(request);
+    SaxonTransformationEngine.Output output = executeWithTimeout(request);
     long executionTimeMs = (System.nanoTime() - startedAt) / 1_000_000;
     long inputSize = sizeOf(request.xml()) + sizeOf(request.xslt());
-    long outputSize = sizeOf(result);
+    long outputSize = sizeOf(output.text());
 
     return new TransformResponse(
-        result,
-        new TransformMetadata(executionTimeMs, inputSize, outputSize)
+        output.text(),
+        new TransformMetadata(executionTimeMs, inputSize, outputSize, output.method())
     );
   }
 
   // Executes the transformation on the executor and enforces the configured timeout.
-  private String executeWithTimeout(TransformRequest request) {
+  private SaxonTransformationEngine.Output executeWithTimeout(TransformRequest request) {
     // Run the transformation on a separate task so we can enforce the configured timeout.
-    Future<String> transformationTask = transformationExecutor.submit(
+    Future<SaxonTransformationEngine.Output> transformationTask = transformationExecutor.submit(
         () -> transformationEngine.transform(request.xml(), request.xslt())
     );
 
