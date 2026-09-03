@@ -2,30 +2,53 @@
  * Scoped embed styling that mirrors the main UI layout.
  */
 .xslt-widget {
-  --widget-primary: #6794f1;
-  --widget-primary-strong: #063389;
-  --widget-link: #6794f1;
-  --widget-link-hover: #063389;
-  --widget-success: #0f9f6e;
-  --widget-error: #d14343;
+  --widget-primary: #3761ad;
+  --widget-primary-strong: #273378;
+  --widget-link: #3761ad;
+  --widget-link-hover: #273378;
+  --widget-success: #0f7a60;
+  --widget-error: #b3261e;
   --widget-surface: #ffffff;
-  --widget-surface-soft: #f6f9fe;
-  --widget-surface-accent: #f3f7ff;
-  --widget-border: #d9e4f2;
-  --widget-border-strong: #c6d4e8;
-  --widget-text: #1e293b;
-  --widget-text-soft: #5f728b;
-  --widget-text-muted: #7d8ea4;
+  --widget-surface-soft: #f4f8ff;
+  --widget-surface-accent: #f1f5fd;
+  --widget-border: #c6d2e8;
+  --widget-border-strong: #c6d2e8;
+  --widget-text: #212b45;
+  --widget-text-soft: #5a6478;
+  --widget-text-muted: #666e80;
   --widget-code-text: #27364d;
-  --widget-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-  --widget-shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.06);
-  --widget-success-bg: #ebfbf4;
-  --widget-error-bg: #fff2f2;
+  --widget-shadow: 0 10px 28px rgba(33, 43, 69, 0.10);
+  --widget-shadow-soft: 0 4px 12px rgba(33, 43, 69, 0.06);
+  --widget-success-bg: #e7f7f1;
+  --widget-error-bg: #fdecec;
+
+  /* Added with the Docnaut restyle. The names above are the documented
+     override contract and never change; these extend it so that nothing in
+     this file is left as a bare hex a host page cannot reach. */
+  --widget-primary-fg: #ffffff;
+  --widget-surface-hi: #e7eefc;
+  --widget-chip: #e9eff9;
+  --widget-icon-fill: #ffffff;
+  --widget-tip-bg: #212b45;
+  --widget-tip-fg: #f1f5fd;
+  --widget-error-line: #f0c8c5;
+  --widget-error-surface: #fff7f6;
+  --widget-error-code-bg: #fffafa;
+  --widget-error-fg: #7c2424;
+  --widget-track: rgba(198, 210, 232, 0.45);
+  --widget-thumb: #a9bfe5;
+  --widget-thumb-2: #6f8fc6;
+  --widget-thumb-hi: #88a9dd;
+  --widget-thumb-hi-2: #587ab4;
+  --widget-radius: 16px;
+  --widget-radius-sm: 9px;
+  --widget-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --widget-font-mono: 'JetBrains Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
   display: block;
   width: 100%;
   margin: 0;
   color: var(--widget-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--widget-font);
 }
 
 .xslt-widget,
@@ -43,7 +66,7 @@
 
 .xslt-widget__shell {
   width: 100%;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f8fd 100%);
+  background: var(--widget-surface);
   color: var(--widget-text);
 }
 
@@ -60,8 +83,8 @@
 }
 
 .xslt-widget__page-header {
-  background: #ffffff;
-  border-bottom: 1px solid #e6edf7;
+  background: var(--widget-surface);
+  border-bottom: 1px solid var(--widget-border);
   padding: 8px 6px 6px;
   margin-bottom: 6px;
   flex: 0 0 auto;
@@ -110,7 +133,7 @@
   min-height: 0;
   background: var(--widget-surface);
   border: 1px solid var(--widget-border);
-  border-radius: 20px;
+  border-radius: var(--widget-radius);
   box-shadow: var(--widget-shadow);
   overflow: hidden;
   display: flex;
@@ -124,7 +147,7 @@
   gap: 12px;
   min-height: 64px;
   padding: 12px 14px;
-  background: #ffffff;
+  background: var(--widget-surface);
   border-bottom: 1px solid var(--widget-border);
 }
 
@@ -147,14 +170,19 @@
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-.xslt-widget__tab-button:hover,
+.xslt-widget__tab-button:hover {
+  color: var(--widget-text);
+}
+
 .xslt-widget__tab-button:focus-visible {
-  color: var(--widget-primary-strong);
-  outline: none;
+  color: var(--widget-text);
+  outline: 3px solid var(--widget-primary);
+  outline-offset: 2px;
+  border-radius: var(--widget-radius-sm);
 }
 
 .xslt-widget__tab-button.is-active {
-  color: var(--widget-primary-strong);
+  color: var(--widget-text);
   border-bottom-color: var(--widget-primary);
 }
 
@@ -171,8 +199,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  font-weight: 700;
+  border-radius: var(--widget-radius-sm);
+  font-weight: 600;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -182,13 +210,13 @@
   padding: 0 14px;
   border: 1px solid var(--widget-border);
   background: var(--widget-surface-soft);
-  color: var(--widget-primary-strong);
+  color: var(--widget-text);
   cursor: pointer;
   overflow: hidden;
 }
 
 .xslt-widget__upload-button:hover {
-  background: #eaf1fc;
+  background: var(--widget-surface-hi);
   border-color: var(--widget-border-strong);
 }
 
@@ -218,8 +246,9 @@
   background: var(--widget-surface-accent);
   overflow: auto;
   color: var(--widget-code-text);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.95rem;
+  font-family: var(--widget-font-mono);
+  font-size: 0.88rem;
+  tab-size: 2;
   line-height: 1.65;
 }
 
@@ -229,19 +258,19 @@
 }
 
 .xslt-widget__editor-textarea:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px rgba(103, 148, 241, 0.18);
+  outline: 2px solid var(--widget-primary);
+  outline-offset: -2px;
 }
 
 .xslt-widget__btn-primary {
   min-width: 176px;
   padding: 11px 16px;
   background: var(--widget-primary);
-  color: #ffffff;
+  color: var(--widget-primary-fg);
   border: none;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(103, 148, 241, 0.24);
+  box-shadow: none;
 }
 
 .xslt-widget__btn-primary:hover:not(:disabled) {
@@ -295,8 +324,8 @@
   justify-content: center;
   min-height: 28px;
   padding: 4px 12px;
-  border-radius: 999px;
-  background: #eef3fb;
+  border-radius: var(--widget-radius-sm);
+  background: var(--widget-chip);
   color: var(--widget-text-soft);
   font-size: 0.76rem;
   font-weight: 700;
@@ -319,20 +348,25 @@
   min-width: 40px;
   height: 40px;
   border: 1px solid var(--widget-border);
-  border-radius: 14px;
-  background: #f7faff;
+  border-radius: var(--widget-radius-sm);
+  background: var(--widget-surface-soft);
   box-shadow: var(--widget-shadow-soft);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
   flex: 0 0 auto;
 }
 
-.xslt-widget__copy-button:hover:not(:disabled),
-.xslt-widget__copy-button:focus-visible:not(:disabled) {
-  background: #ffffff;
-  border-color: var(--widget-border-strong);
+.xslt-widget__copy-button:hover:not(:disabled) {
+  background: var(--widget-surface);
+  border-color: var(--widget-primary);
   transform: translateY(-1px);
-  outline: none;
+}
+
+/* Flush against the panel edge, so the ring is drawn inward or overflow:hidden
+   on the panel clips it. */
+.xslt-widget__copy-button:focus-visible {
+  outline: 3px solid var(--widget-primary);
+  outline-offset: -3px;
 }
 
 .xslt-widget__copy-button:disabled {
@@ -353,9 +387,9 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 2px solid #162a50;
+  border: 2px solid currentColor;
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--widget-icon-fill);
 }
 
 .xslt-widget__copy-icon::before {
@@ -375,9 +409,9 @@
   bottom: -40px;
   transform: translateX(-50%) translateY(8px);
   padding: 7px 12px;
-  border-radius: 10px;
-  background: #000000;
-  color: #ffffff;
+  border-radius: var(--widget-radius-sm);
+  background: var(--widget-tip-bg);
+  color: var(--widget-tip-fg);
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
@@ -421,8 +455,8 @@
 }
 
 .xslt-widget__response-code.is-error {
-  background: #fff9f9;
-  color: #7c2424;
+  background: var(--widget-error-code-bg);
+  color: var(--widget-error-fg);
 }
 
 .xslt-widget__response-error-card {
@@ -430,9 +464,9 @@
   gap: 8px;
   margin: 14px 14px 0;
   padding: 14px 16px;
-  border: 1px solid #f1c0c0;
-  border-radius: 16px;
-  background: #fff8f8;
+  border: 1px solid var(--widget-error-line);
+  border-radius: var(--widget-radius);
+  background: var(--widget-error-surface);
 }
 
 .xslt-widget__response-error-title {
@@ -446,20 +480,20 @@
 .xslt-widget__response-error-message {
   font-size: 0.95rem;
   line-height: 1.4;
-  color: #842c2c;
+  color: var(--widget-error-fg);
 }
 
 .xslt-widget__response-error-code {
   font-size: 0.84rem;
   font-weight: 700;
-  color: #9c3535;
+  color: var(--widget-error);
 }
 
 .xslt-widget__editor-textarea,
 .xslt-widget__result-output,
 .xslt-widget__response-code {
   scrollbar-width: thin;
-  scrollbar-color: rgba(111, 143, 198, 0.9) rgba(217, 228, 242, 0.65);
+  scrollbar-color: var(--widget-thumb-2) var(--widget-track);
 }
 
 .xslt-widget__editor-textarea::-webkit-scrollbar,
@@ -472,28 +506,28 @@
 .xslt-widget__editor-textarea::-webkit-scrollbar-track,
 .xslt-widget__result-output::-webkit-scrollbar-track,
 .xslt-widget__response-code::-webkit-scrollbar-track {
-  background: rgba(217, 228, 242, 0.55);
+  background: var(--widget-track);
   border-radius: 999px;
 }
 
 .xslt-widget__editor-textarea::-webkit-scrollbar-thumb,
 .xslt-widget__result-output::-webkit-scrollbar-thumb,
 .xslt-widget__response-code::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #a9bfe5 0%, #6f8fc6 100%);
-  border: 3px solid rgba(217, 228, 242, 0.55);
+  background: linear-gradient(180deg, var(--widget-thumb) 0%, var(--widget-thumb-2) 100%);
+  border: 3px solid var(--widget-track);
   border-radius: 999px;
 }
 
 .xslt-widget__editor-textarea::-webkit-scrollbar-thumb:hover,
 .xslt-widget__result-output::-webkit-scrollbar-thumb:hover,
 .xslt-widget__response-code::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #88a9dd 0%, #587ab4 100%);
+  background: linear-gradient(180deg, var(--widget-thumb-hi) 0%, var(--widget-thumb-hi-2) 100%);
 }
 
 .xslt-widget__footer {
   width: 100%;
   margin-top: 6px;
-  background: #ffffff;
+  background: var(--widget-surface);
   border-top: 1px solid var(--widget-border);
   padding: 6px 12px;
   text-align: center;

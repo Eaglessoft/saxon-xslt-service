@@ -1,668 +1,492 @@
-html {
-    height: 100%;
+/* XSLT Transformer - the working surface.
+
+   tools-theme.css owns the palette, the chrome, the --ws-*/--x-* tokens and the
+   tool shell. It is synced from the portal; never edit it here. This file owns
+   only the two-pane workspace. */
+:root{
+    --ws-chip:#e9eff9;
+  --ws-icon-fill:#ffffff;
+  --ws-err-line:#f0c8c5; --ws-err-surface:#fff7f6;
+  --ws-err-code-bg:#fffafa;
+
+  --ws-track:rgba(198,210,232,.45);
+  --ws-thumb:#a9bfe5;    --ws-thumb-2:#6f8fc6;
+  --ws-thumb-hi:#88a9dd; --ws-thumb-hi-2:#587ab4;
+  --ws-thumb-flat:rgba(111,143,198,.9);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ws-chip:#222f52;
+  --ws-icon-fill:#18213c;
+  --ws-err-line:#5c2320; --ws-err-surface:#2a1614;
+  --ws-err-code-bg:#221210;
+
+  --ws-track:rgba(51,67,107,.45);
+  --ws-thumb:#3d5182;    --ws-thumb-2:#54699e;
+  --ws-thumb-hi:#4b62a0; --ws-thumb-hi-2:#6580bd;
+  --ws-thumb-flat:rgba(84,105,158,.95);
+}}
+:root[data-theme="dark"]{
+  --ws-chip:#222f52;
+  --ws-icon-fill:#18213c;
+  --ws-err-line:#5c2320; --ws-err-surface:#2a1614;
+  --ws-err-code-bg:#221210;
+
+  --ws-track:rgba(51,67,107,.45);
+  --ws-thumb:#3d5182;    --ws-thumb-2:#54699e;
+  --ws-thumb-hi:#4b62a0; --ws-thumb-hi-2:#6580bd;
+  --ws-thumb-flat:rgba(84,105,158,.95);
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+/* The shell (body.tool-page, .tool-main) is in tools-theme.css. Here: the
+   two-column grid, and the min-height:0 chain that lets the panes shrink -
+   shell -> panel -> stack -> textarea, one missing link and the panels grow to
+   their content and push the footer off screen. */
+/* The workspace is the whole point of this page, so it takes the first screen
+   and its panes scroll internally - a transformation result belongs beside its
+   input, not below it, so this page never grows the document. */
+.workspace-layout{display:flex;flex-direction:column}
+.workspace-shell{flex:1 1 auto;min-height:0;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:0}
 
-:root {
-    --primary-color: #6794f1;
-    --primary-hover: #063389;
-    --primary-active: #063389;
-    --link-color: #6794f1;
-    --link-hover: #063389;
-    --success-color: #0f9f6e;
-    --error-color: #d14343;
-    --surface-color: #ffffff;
-    --surface-soft: #f6f9fe;
-    --surface-accent: #f3f7ff;
-    --border-color: #d9e4f2;
-    --border-strong: #c6d4e8;
-    --text-primary: #1e293b;
-    --text-secondary: #5f728b;
-    --text-muted: #7d8ea4;
-    --code-text: #27364d;
-    --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-    --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.06);
-    --success-bg: #ebfbf4;
-    --error-bg: #fff2f2;
-}
+/* ---------------- panels ---------------- */
+.workspace-panel{position:relative;min-width:0;min-height:0;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--card);border:1px solid var(--line2);border-radius:var(--radius);
+  box-shadow:var(--ws-shadow)}
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(180deg, #ffffff 0%, #f5f8fd 100%);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    color: var(--text-primary);
-}
+.panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:44px;padding:5px 12px;
+  background:var(--card);border-bottom:1px solid var(--line2)}
 
-.top-bar {
-    background: var(--primary-hover);
-    width: 100%;
-    padding: 8px 0;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    min-height: 60px;
-    display: block;
-    flex: 0 0 auto;
-}
+/* State strip on the result panel. Redundant by design - the badge says the
+   same thing in words. */
+.result-panel::before{content:"";position:absolute;inset:0 0 auto;height:3px;
+  background:transparent;transition:background-color .2s ease;z-index:1}
+.result-panel.is-success::before{background:var(--ws-ok)}
+.result-panel.is-error::before{background:var(--ws-err)}
 
-.top-bar-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    align-items: center;
-}
+/* ---------------- editor tabs ---------------- */
+.tab-strip{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
 
-.top-bar .logo-container {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    transition: opacity 0.2s ease;
-}
+.tab-button{border:none;background:transparent;color:var(--muted);
+  font-family:var(--font);font-size:.88rem;font-weight:600;
+  padding:0 0 8px;border-bottom:3px solid transparent;cursor:pointer;
+  transition:color .18s ease,border-color .18s ease}
+.tab-button:hover{color:var(--fg)}
+.tab-button:focus-visible{outline:3px solid var(--accent);outline-offset:2px;
+  border-radius:var(--radius-sm)}
+.tab-button.is-active{color:var(--fg);border-bottom-color:var(--accent)}
 
-.top-bar .logo-container:hover {
-    opacity: 0.9;
-}
+/* ---------------- panel actions ---------------- */
+.panel-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
 
-.top-bar .logo-container img {
-    max-height: 60px;
-    height: auto;
-    width: auto;
-    display: block;
-}
+.upload-button{display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-sm);font-family:var(--font);font-weight:600;
+  transition:background-color .2s ease,border-color .2s ease,color .2s ease,
+             transform .2s ease,filter .2s ease}
 
-.container {
-    width: 100%;
-    max-width: none;
-    margin: 0 auto;
-    padding: 0;
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+.upload-button{position:relative;min-height:38px;padding:0 14px;
+  border:1px solid var(--line2);background:var(--ws-soft);color:var(--fg);
+  font-size:.85rem;cursor:pointer;overflow:hidden}
+.upload-button:hover{background:var(--ws-soft-hi);border-color:var(--accent)}
+/* The input is what takes focus, but it is opacity:0, so its own ring is
+   invisible - draw it on the label instead. */
+.upload-button:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+@supports not selector(:has(*)){
+  .upload-button:focus-within{outline:3px solid var(--accent);outline-offset:2px}
 }
+.upload-button input{position:absolute;inset:0;opacity:0;cursor:pointer}
 
-.page-header {
-    background: #ffffff;
-    border-bottom: 1px solid #e6edf7;
-    padding: 8px 6px 6px;
-    margin-bottom: 6px;
-    flex: 0 0 auto;
-}
+/* .btn-primary is in tools-theme.css. The width floor stops the button
+   resizing when its label changes; disabled here means busy, not unavailable. */
+.btn-primary{min-width:170px}
+.btn-primary:disabled{cursor:wait}
 
-.header-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
+/* ---------------- editors ---------------- */
+.editor-stack,.result-output{flex:1 1 auto;min-height:0;background:var(--ws-code-bg)}
+/* Anchor for the floating search button. .result-surface exists only for this:
+   #resultOutput scrolls and app.js rewrites it wholesale, so a button inside it
+   would drift and then be destroyed. */
+.editor-stack,.result-surface{position:relative}
+.result-surface{flex:1 1 auto;min-height:0;display:flex}
 
-.page-header h1 {
-    font-size: 1.54rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
+/* White, always: a preview shows the document as a browser would, and painting
+   it on the app's dark surface would misrepresent what the stylesheet produces. */
+.result-preview{flex:1 1 auto;min-height:0;width:100%;border:0;background:#fff}
 
-.workspace-layout {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 0 6px;
-}
+/* The textarea and the <pre> must keep identical size, line-height and padding
+   or the two panels stop lining up. tab-size:2 - the default 8 wastes width. */
+.editor-textarea,.response-code{width:100%;border:none;
+  background:var(--ws-code-bg);color:var(--ws-code-fg);
+  font-family:var(--font-mono);font-size:.88rem;line-height:1.55;tab-size:2}
 
-.workspace-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 8px;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-}
+.editor-textarea{height:100%;resize:none;padding:12px 18px 14px}
+/* Negative offset draws the ring inside, so there is no layout shift and
+   .workspace-panel overflow:hidden cannot clip it. The old inset box-shadow
+   ring was rgba(103,148,241,.18) - about 1.1:1, i.e. invisible. */
+.editor-textarea:focus{outline:2px solid var(--accent);outline-offset:-2px}
 
-.workspace-panel {
-    min-width: 0;
-    min-height: 0;
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
+/* ---------------- result header ---------------- */
+.result-title-row{display:flex;align-items:center;gap:10px;min-width:0;flex:0 0 auto}
 
-.panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 64px;
-    padding: 12px 14px;
-    background: #ffffff;
-    border-bottom: 1px solid var(--border-color);
-}
-.editor-header {
-    align-items: center;
-}
+/* The badge and the status line, kept away from the tab labels and given the
+   slack so a long status can ellipsis rather than shove the buttons. */
+.result-meta{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto;
+  /* Wide enough that the badge reads as a separate group rather than a third
+     tab. The header's own 12px gap sits on top of this. */
+  margin-left:16px}
 
-.tab-strip {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
+/* Underline as a pseudo-element, not a border: the border's box sits below the
+   text and lifts the label above the badge sharing this row. */
+.result-header .tab-button{padding:0;border-bottom:none;position:relative}
+.result-header .tab-button.is-active::after{content:"";position:absolute;
+  left:0;right:0;bottom:-7px;height:3px;border-radius:3px;background:var(--accent)}
 
-.tab-button {
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.96rem;
-    font-weight: 700;
-    padding: 0 0 8px;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease;
-}
 
-.tab-button:hover,
-.tab-button:focus-visible {
-    color: var(--primary-hover);
-    outline: none;
-}
+.status-text{font-size:.85rem;line-height:1.35;color:var(--muted);min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-text.is-success{color:var(--ws-ok)}
+.status-text.is-error{color:var(--ws-err)}
 
-.tab-button.is-active {
-    color: var(--primary-hover);
-    border-bottom-color: var(--primary-color);
-}
+.result-badge{display:inline-flex;align-items:center;justify-content:center;
+  padding:3px 10px;border-radius:var(--radius-sm);
+  background:var(--ws-chip);color:var(--muted);
+  font-size:.71rem;font-weight:600;letter-spacing:.03em;flex:0 0 auto}
+.result-badge.is-success{background:var(--ws-ok-bg);color:var(--ws-ok)}
+.result-badge.is-error{background:var(--ws-err-bg);color:var(--ws-err)}
 
-.panel-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-left: auto;
-}
+/* ---------------- copy button ---------------- */
+.copy-button{position:relative;width:38px;min-width:38px;height:38px;
+  border:1px solid var(--line2);border-radius:var(--radius-sm);
+  background:var(--ws-soft);color:var(--muted);box-shadow:var(--ws-shadow-sm);
+  cursor:pointer;flex:0 0 auto;
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease,
+             background-color .2s ease,color .2s ease}
+.copy-button:hover:not(:disabled){background:var(--card);border-color:var(--accent);
+  color:var(--fg);transform:translateY(-1px)}
+/* Sits flush against the panel edge, so the ring must be drawn inward. */
+.copy-button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.copy-button:disabled{opacity:.55;cursor:not-allowed}
 
-.upload-button,
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    font-weight: 700;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
+.copy-icon{position:relative;display:inline-block;width:20px;height:20px}
+/* The background is load-bearing: it occludes the rear square so the two read
+   as stacked sheets. It follows the button's own surface, not the card's. */
+.copy-icon::before,.copy-icon::after{content:"";position:absolute;
+  width:14px;height:14px;border:2px solid currentColor;border-radius:4px;
+  background:var(--ws-icon-fill)}
+.copy-icon::before{top:2px;left:2px;opacity:.7}
+.copy-icon::after{top:6px;left:6px}
 
-.upload-button {
-    position: relative;
-    min-height: 38px;
-    padding: 0 14px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-soft);
-    color: var(--primary-hover);
-    cursor: pointer;
-    overflow: hidden;
-}
+/* is-feedback reveals the tooltip for both outcomes, so success and failure
+   need their own classes - otherwise a red button could read "Copied". */
+.copy-check{position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(.7);
+  width:19px;height:19px;opacity:0;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease}
+.copy-button.is-copied .copy-icon{opacity:0}
+.copy-button.is-copied .copy-check{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.copy-button.is-copied{color:var(--ws-ok);border-color:var(--ws-ok);
+  background:var(--ws-ok-bg)}
+.copy-button.is-failed{color:var(--ws-err);border-color:var(--ws-err);
+  background:var(--ws-err-bg)}
+/* The hover rule below would otherwise repaint the button mid-confirmation,
+   because the pointer is still on it the instant after the click. */
+.copy-button.is-copied:hover:not(:disabled){background:var(--ws-ok-bg);
+  border-color:var(--ws-ok);color:var(--ws-ok)}
+.copy-button.is-failed:hover:not(:disabled){background:var(--ws-err-bg);
+  border-color:var(--ws-err);color:var(--ws-err)}
+.copy-icon{transition:opacity .16s ease}
 
-.upload-button:hover {
-    background: #eaf1fc;
-    border-color: var(--border-strong);
-}
-
-.upload-button input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.editor-stack,
-.result-output {
-    flex: 1;
-    min-height: 0;
-    background: var(--surface-accent);
-}
-
-.editor-textarea,
-.response-code {
-    width: 100%;
-    height: 100%;
-    border: none;
-    background: var(--surface-accent);
-    color: var(--code-text);
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 0.95rem;
-    line-height: 1.65;
-}
-
-.editor-textarea {
-    resize: none;
-    padding: 16px 18px 18px;
-}
-
-.editor-textarea:focus {
-    outline: none;
-    box-shadow: inset 0 0 0 2px rgba(103, 148, 241, 0.18);
-}
-
-.btn-primary {
-    min-width: 176px;
-    padding: 11px 16px;
-    background: var(--primary-color);
-    color: #ffffff;
-    border: none;
-    font-size: 0.95rem;
-    cursor: pointer;
-    box-shadow: 0 10px 24px rgba(103, 148, 241, 0.24);
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-}
-
-.btn-primary:disabled {
-    opacity: 0.7;
-    cursor: wait;
-    box-shadow: none;
-}
-
-.result-title-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    flex: 1;
-    flex-wrap: nowrap;
-}
-
-.panel-title {
-    font-size: 0.96rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    flex: 0 0 auto;
-}
-
-.status-text {
-    font-size: 0.9rem;
-    line-height: 1.35;
-    color: var(--text-secondary);
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.status-text.is-success {
-    color: var(--success-color);
-}
-
-.status-text.is-error {
-    color: var(--error-color);
-}
-
-.result-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: #eef3fb;
-    color: var(--text-secondary);
-    font-size: 0.76rem;
-    font-weight: 700;
-    flex: 0 0 auto;
-}
-
-.result-badge.is-success {
-    background: var(--success-bg);
-    color: var(--success-color);
-}
-
-.result-badge.is-error {
-    background: var(--error-bg);
-    color: var(--error-color);
-}
-
-.copy-button {
-    position: relative;
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    background: #f7faff;
-    box-shadow: var(--shadow-soft);
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
-    flex: 0 0 auto;
-}
-.copy-button:hover:not(:disabled),
-.copy-button:focus-visible:not(:disabled) {
-    background: #ffffff;
-    border-color: var(--border-strong);
-    transform: translateY(-1px);
-    outline: none;
-}
-
-.copy-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.copy-icon {
-    position: relative;
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-}
-.copy-icon::before,
-.copy-icon::after {
-    content: "";
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    border: 2px solid #162a50;
-    border-radius: 4px;
-    background: #ffffff;
-}
-.copy-icon::before {
-    top: 2px;
-    left: 2px;
-    opacity: 0.78;
-}
-.copy-icon::after {
-    top: 6px;
-    left: 6px;
-}
-.copy-tooltip {
-    position: absolute;
-    left: 50%;
-    bottom: -40px;
-    transform: translateX(-50%) translateY(8px);
-    padding: 7px 12px;
-    border-radius: 10px;
-    background: #000000;
-    color: #ffffff;
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
+.copy-tooltip{position:absolute;left:50%;bottom:-38px;
+  transform:translateX(-50%) translateY(8px);
+  padding:6px 11px;border-radius:var(--radius-sm);
+  background:var(--fg);color:var(--bg);
+  font-size:.75rem;font-weight:600;line-height:1;white-space:nowrap;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease;z-index:2}
 .copy-button:hover .copy-tooltip,
 .copy-button:focus-visible .copy-tooltip,
-.copy-button.is-feedback .copy-tooltip {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-}
+.copy-button.is-feedback .copy-tooltip{opacity:1;transform:translateX(-50%) translateY(0)}
 
-.result-output {
-    padding: 0;
-    overflow: auto;
-    display: flex;
-}
+/* ---------------- result output ---------------- */
+.result-output{padding:0;overflow:auto;display:flex}
 
-.result-placeholder {
-    display: grid;
-    gap: 10px;
-    margin: 14px;
-    padding: 16px;
-    border: 1px dashed var(--border-strong);
-    border-radius: 16px;
-    background: #ffffff;
-    align-self: flex-start;
-}
+.response-shell{display:flex;flex-direction:column;gap:10px;height:100%;width:100%}
 
-.response-shell {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    height: 100%;
-    width: 100%;
-}
+.response-code{flex:1;min-height:0;padding:16px 18px 18px;margin:0;overflow:auto;
+  border-radius:0;white-space:pre-wrap;word-break:break-word}
+.response-code.is-error{background:var(--ws-err-code-bg);color:var(--ws-err-fg)}
 
-.result-placeholder-title {
-    font-size: 0.98rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
+.response-error-card{display:grid;gap:8px;margin:14px 14px 0;padding:14px 16px;
+  border:1px solid var(--ws-err-line);border-radius:var(--radius);
+  background:var(--ws-err-surface)}
+.response-error-title{font-size:.72rem;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ws-err)}
+.response-error-message{font-size:.9rem;line-height:1.45;color:var(--ws-err-fg)}
+.response-error-code{font-family:var(--font-mono);font-size:.8rem;font-weight:500;
+  color:var(--ws-err)}
 
-.result-placeholder-copy {
-    font-size: 0.9rem;
-    line-height: 1.4;
-    color: var(--text-secondary);
-}
-
-.response-code {
-    flex: 1;
-    min-height: 0;
-    padding: 16px 18px 18px;
-    margin: 0;
-    overflow: auto;
-    border: none;
-    border-radius: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.response-code.is-error {
-    background: #fff9f9;
-    color: #7c2424;
-}
-
-.response-error-card {
-    display: grid;
-    gap: 8px;
-    margin: 14px 14px 0;
-    padding: 14px 16px;
-    border: 1px solid #f1c0c0;
-    border-radius: 16px;
-    background: #fff8f8;
-}
-
-.response-error-title {
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--error-color);
-}
-
-.response-error-message {
-    font-size: 0.95rem;
-    line-height: 1.4;
-    color: #842c2c;
-}
-
-.response-error-code {
-    font-size: 0.84rem;
-    font-weight: 700;
-    color: #9c3535;
-}
-
-.editor-textarea,
-.result-output,
-.response-code {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(111, 143, 198, 0.9) rgba(217, 228, 242, 0.65);
-}
+/* ---------------- scrollbars ----------------
+   Both engines need theming: scrollbar-width:thin makes Firefox ignore the
+   ::-webkit- block entirely. Anything missed still fails safe, because
+   color-scheme:dark from the palette darkens the UA's own scrollbars. */
+.editor-textarea,.result-output,.response-code{
+  scrollbar-width:thin;scrollbar-color:var(--ws-thumb-flat) var(--ws-track)}
 
 .editor-textarea::-webkit-scrollbar,
 .result-output::-webkit-scrollbar,
-.response-code::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-}
+.response-code::-webkit-scrollbar{width:12px;height:12px}
 
 .editor-textarea::-webkit-scrollbar-track,
 .result-output::-webkit-scrollbar-track,
-.response-code::-webkit-scrollbar-track {
-    background: rgba(217, 228, 242, 0.55);
-    border-radius: 999px;
-}
+.response-code::-webkit-scrollbar-track{background:var(--ws-track);border-radius:999px}
 
 .editor-textarea::-webkit-scrollbar-thumb,
 .result-output::-webkit-scrollbar-thumb,
-.response-code::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #a9bfe5 0%, #6f8fc6 100%);
-    border: 3px solid rgba(217, 228, 242, 0.55);
-    border-radius: 999px;
-}
+.response-code::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,var(--ws-thumb) 0%,var(--ws-thumb-2) 100%);
+  border:3px solid var(--ws-track);border-radius:999px}
 
 .editor-textarea::-webkit-scrollbar-thumb:hover,
 .result-output::-webkit-scrollbar-thumb:hover,
-.response-code::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #88a9dd 0%, #587ab4 100%);
-}
+.response-code::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg,var(--ws-thumb-hi) 0%,var(--ws-thumb-hi-2) 100%)}
 
 .editor-textarea::-webkit-scrollbar-corner,
 .result-output::-webkit-scrollbar-corner,
-.response-code::-webkit-scrollbar-corner {
-    background: transparent;
+.response-code::-webkit-scrollbar-corner{background:transparent}
+
+/* ---------------- utility ----------------
+   app.js toggles this on the textareas and the upload labels. It keeps
+   !important because it competes with .editor-textarea and .editor-stack, and
+   it stays here rather than in the shared theme: a global display:none utility
+   inside a file copied verbatim into two other repos is a landmine. */
+.is-hidden{display:none !important}
+
+/* ---------------- responsive ----------------
+   Stack the panes where two columns stop working. 980, not 1180: at 1180 an
+   ordinary non-maximised window fell into the stacked layout and got a flat
+   340px editor whatever the screen height.
+
+   `.tool-page .workspace-shell`, not `.workspace-shell` - the three-column pane
+   rule below has equal specificity and comes later, so a bare selector loses
+   and the panes never actually stack. */
+@media (max-width:980px){
+  .workspace-layout{padding-bottom:clamp(10px,1.6vh,18px)}
+  .tool-page .workspace-shell{flex:none;grid-template-columns:minmax(0,1fr);
+    grid-auto-flow:row;gap:clamp(8px,1.1vh,12px)}
+  .pane-resizer{display:none}
+  .editor-stack,.result-output{min-height:clamp(340px,46vh,700px)}
+  .editor-textarea,.response-code{height:auto;min-height:clamp(340px,46vh,700px)}
 }
 
-footer {
-    width: 100%;
-    margin-top: 6px;
-    background: #ffffff;
-    border-top: 1px solid var(--border-color);
-    padding: 6px 12px;
-    text-align: center;
-    flex: 0 0 auto;
+@media (max-width:860px){
+  .panel-header{flex-direction:column;align-items:flex-start}
+  .panel-actions,.result-title-row{width:100%}
+  .result-title-row{flex-wrap:wrap}
+  .status-text{white-space:normal;overflow:visible;text-overflow:clip}
 }
 
-.footer-content {
-    max-width: none;
-    margin: 0 auto;
+/* ================================================================
+   Editor layer.
+
+   The CodeMirror instances are mounted by editor.js, which is a module: if the
+   CDN is blocked or import maps are unsupported it never runs, no .cm-ready
+   lands on <html>, and the page keeps the plain textareas it was served with.
+   Every rule below is therefore gated on .cm-ready - a broken editor must not
+   also mean a hidden one.
+   ================================================================ */
+.cm-host {
+  display: none;
+  min-height: 0;
+  height: 100%;
 }
 
-footer .footer-brand {
-    font-weight: 500;
-    color: var(--text-primary);
-    margin-bottom: 2px;
+.cm-ready .cm-host {
+  display: block;
 }
 
-footer .footer-tech {
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-    opacity: 0.8;
+/* The textarea stays in the DOM - app.js reads its value and the upload
+   handler writes to it - it just stops being the thing you look at. Same for
+   the result <pre>: app.js still writes it, the editor just reads from it. */
+.cm-ready .editor-textarea.cm-backing,
+.cm-ready .response-code.cm-backing {
+  display: none !important;
 }
 
-footer .footer-link {
-    color: var(--link-color);
-    text-decoration: none;
-    transition: color 0.2s ease;
+/* The result editor sits where the <pre> did, inside the flex column that
+   .response-shell sets up. */
+.cm-host.cm-result {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-footer .footer-link:hover {
-    color: var(--link-hover);
-    text-decoration: underline;
+.cm-host.is-hidden {
+  display: none !important;
 }
 
-.is-hidden {
-    display: none !important;
+.cm-editor {
+  height: 100%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
+/* ---------------- icon button ---------------- */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line2);
+  border-radius: var(--radius-sm);
+  background: var(--ws-soft);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background-color .18s ease;
 }
 
-@media (max-width: 1180px) {
-    .workspace-layout {
-        overflow: auto;
-    }
-
-    .workspace-shell {
-        grid-template-columns: 1fr;
-        overflow: auto;
-    }
-
-    .workspace-panel {
-        min-height: 0;
-    }
-
-    .response-code,
-    .editor-textarea {
-        min-height: 320px;
-    }
+.icon-button:hover {
+  color: var(--fg);
+  border-color: var(--accent);
+  background: var(--card);
 }
 
-@media (max-width: 860px) {
-    .panel-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .panel-actions,
-    .result-title-row {
-        width: 100%;
-    }
-
-    .result-title-row {
-        flex-wrap: wrap;
-    }
-
-    .status-text {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: clip;
-    }
+.icon-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
-@media (max-width: 768px) {
-    .top-bar {
-        padding: 6px 0;
-    }
+.icon-button svg {
+  width: 16px;
+  height: 16px;
+}
 
-    .top-bar .logo-container img {
-        max-height: 40px;
-    }
+/* Without an editor there is nothing to search, so the affordance goes away
+   rather than sitting there inert. */
+.icon-button[data-editor-search] {
+  display: none;
+}
 
-    .top-bar-content {
-        padding: 0 12px;
-    }
+.cm-ready .icon-button[data-editor-search] {
+  display: inline-grid;
+}
 
-    .page-header h1 {
-        font-size: 1.36rem;
-    }
+/* ---------------- floating editor search ----------------
+   On the code surface, because that is the text it searches. Hidden while the
+   search panel is open - CodeMirror draws that panel right here. */
+.cm-ready .editor-search-float {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  opacity: .55;
+  background: var(--card);
+  box-shadow: var(--ws-shadow-sm);
+  transition: opacity .18s ease, color .18s ease, border-color .18s ease,
+              background-color .18s ease;
+}
 
-    .workspace-layout {
-        padding: 0 4px;
-    }
+.cm-ready .editor-stack:hover .editor-search-float,
+.cm-ready .editor-stack:focus-within .editor-search-float,
+.cm-ready .result-surface:hover .editor-search-float,
+.cm-ready .result-surface:focus-within .editor-search-float,
+.cm-ready .editor-search-float:focus-visible {
+  opacity: 1;
+}
 
-    .workspace-shell {
-        gap: 8px;
-    }
+.cm-ready .editor-search-float svg { width: 15px; height: 15px; }
 
-    .panel-header {
-        padding-left: 12px;
-        padding-right: 12px;
-    }
+/* Hidden until there is a result to search; editor.js sets the class when it
+   mounts the result view. */
+.cm-ready .result-surface .editor-search-float { opacity: 0; pointer-events: none; }
+/* ...and while the rendered preview is showing there is no code pane to search. */
+.result-surface.is-previewing .editor-search-float { opacity: 0 !important; pointer-events: none; }
+.cm-ready .result-surface.has-result-editor .editor-search-float { opacity: .55; pointer-events: auto; }
+.cm-ready .result-surface.has-result-editor:hover .editor-search-float,
+.cm-ready .result-surface.has-result-editor:focus-within .editor-search-float { opacity: 1; }
 
-    .copy-button {
-        width: 46px;
-        min-width: 46px;
-        height: 46px;
-    }
+@supports selector(:has(*)) {
+  .cm-ready .editor-stack:has(.cm-panel.cm-search) .editor-search-float,
+  .cm-ready .result-surface:has(.cm-panel.cm-search) .editor-search-float {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* ---------------- resizable panes ----------------
+   The shell becomes three columns so the divider is a real grid track rather
+   than something overlaid on the seam. panes.js only ever writes the two
+   fraction custom properties, so the layout stays declarative and the keyboard
+   path is the same code as the drag. */
+.workspace-shell {
+  grid-template-columns: var(--pane-left, 1fr) auto var(--pane-right, 1fr);
+}
+
+.pane-resizer {
+  width: 9px;
+  align-self: stretch;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+}
+
+/* The visible part is a hairline; the hit area is the whole 9px, because a
+   1px drag target is a nuisance to grab. */
+.pane-resizer::before {
+  content: "";
+  position: absolute;
+  inset: 12px 4px;
+  border-radius: 999px;
+  background: var(--line2);
+  transition: background-color .18s ease;
+}
+
+.pane-resizer:hover::before,
+.pane-resizer.is-dragging::before {
+  background: var(--accent);
+}
+
+.pane-resizer:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Dragging over an iframe-free page still benefits from this: it stops the
+   pointer turning into a text caret halfway through a drag. */
+body.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* The format toggle is a state, not an action, so it reads as pressed while it
+   is on. It is disabled until there is a result to format. */
+.icon-button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.icon-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.icon-button:disabled:hover {
+  color: var(--muted);
+  border-color: var(--line2);
+  background: var(--ws-soft);
+}
+
+.icon-button[data-format-result] {
+  display: none;
+}
+
+.cm-ready .icon-button[data-format-result] {
+  display: inline-grid;
 }

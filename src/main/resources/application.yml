@@ -7,3 +7,16 @@ xslt:
     max-xslt-size: 2MB
     allowed-origins: "*"
     max-output-size: 10MB
+
+# The UI busts its own caches with a ?v= query string on every asset, but that
+# is a single point of failure: ship new markup against a stale stylesheet and
+# the page renders completely unstyled. Spring Boot sends no Cache-Control for
+# /static/** by default, so browsers cache heuristically. Revalidating makes the
+# query string a second line of defence rather than the only one - the same
+# thing the portal's httpd does for its css/js.
+spring:
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true

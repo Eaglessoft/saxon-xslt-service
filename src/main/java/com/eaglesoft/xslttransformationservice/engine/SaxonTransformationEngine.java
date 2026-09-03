@@ -31,6 +31,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class SaxonTransformationEngine {
 
+  /**
+   * What a transformation produced: the serialized text and the method it was serialized with.
+   *
+   * Nested here rather than sitting in the dto package because it is not part of the API
+   * contract - it never reaches JSON. It travels from this class to the service, which folds
+   * the method into TransformMetadata; that record is the shape clients actually see.
+   */
+  public record Output(String text, String method) {
+  }
+
   private final Processor processor;
   private final long maxOutputSizeInBytes;
   private final ResourceResolver blockingResourceResolver = this::blockExternalResource;
@@ -42,8 +52,9 @@ public class SaxonTransformationEngine {
     configureSecurity();
   }
 
-  // Compiles the stylesheet, runs the transformation, and returns the serialized result.
-  public String transform(String xml, String xslt) {
+  // Compiles the stylesheet, runs the transformation, and returns the serialized result
+  // together with the method it was serialized with.
+  public Output transform(String xml, String xslt) {
     XsltExecutable executable = compile(xslt);
 
     try {
@@ -52,7 +63,8 @@ public class SaxonTransformationEngine {
       LimitedOutputWriter outputWriter = new LimitedOutputWriter(maxOutputSizeInBytes);
       Serializer serializer = processor.newSerializer(outputWriter);
       transformer.transform(sourceDocument.asSource(), serializer);
-      return outputWriter.toString();
+      String text = outputWriter.toString();
+      return new Output(text, resolveOutputMethod(serializer, text));
     } catch (SaxonApiException exception) {
       OutputLimitExceededIOException outputLimitFailure = findCause(exception, OutputLimitExceededIOException.class);
       if (outputLimitFailure != null) {
@@ -70,6 +82,28 @@ public class SaxonTransformationEngine {
           exception
       );
     }
+  }
+
+  /**
+   * The stylesheet's xsl:output method, as the serializer reports it after the run.
+   *
+   * Saxon does not always surface the property this way - and XSLT's own default rule can
+   * pick HTML with no xsl:output present at all, when the result root element is <html> - so
+   * an unreported method falls back to reading the output itself. Guessing is the fallback,
+   * never the primary answer.
+   */
+  private String resolveOutputMethod(Serializer serializer, String text) {
+    String reported = serializer.getOutputProperty(Serializer.Property.METHOD);
+    if (reported != null && !reported.isBlank()) {
+      return reported.trim().toLowerCase();
+    }
+
+    String head = text.length() > 512 ? text.substring(0, 512) : text;
+    String lower = head.toLowerCase();
+    if (lower.contains("<!doctype html") || lower.contains("<html")) {
+      return "html";
+    }
+    return "xml";
   }
 
   // Applies processor-level settings that block external access and unsafe features.

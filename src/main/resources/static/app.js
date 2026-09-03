@@ -8,6 +8,9 @@ const xmlFile = document.getElementById("xmlFile");
 const xsltFile = document.getElementById("xsltFile");
 const transformButton = document.getElementById("transformButton");
 const resultOutput = document.getElementById("resultOutput");
+const resultPreview = document.getElementById("resultPreview");
+const resultTab = document.getElementById("resultTab");
+const previewTab = document.getElementById("previewTab");
 const requestStatus = document.getElementById("requestStatus");
 const resultPanel = document.getElementById("resultPanel");
 const resultBadge = document.getElementById("resultBadge");
@@ -60,14 +63,14 @@ function resetCopyFeedback(delay = 1600) {
   window.clearTimeout(copyResetTimer);
   copyResetTimer = window.setTimeout(() => {
     copyTooltip.textContent = COPY_DEFAULT_LABEL;
-    copyResultButton.classList.remove("is-feedback");
+    copyResultButton.classList.remove("is-feedback", "is-copied", "is-failed");
   }, delay);
 }
 
 function setCopyButtonState(enabled) {
   copyResultButton.disabled = !enabled;
   copyTooltip.textContent = COPY_DEFAULT_LABEL;
-  copyResultButton.classList.remove("is-feedback");
+  copyResultButton.classList.remove("is-feedback", "is-copied", "is-failed");
   window.clearTimeout(copyResetTimer);
 }
 
@@ -109,9 +112,40 @@ function formatStructuredText(value) {
   return text;
 }
 
+/* Single entry point for the two result views, so the tabs, the iframe and the
+   code pane cannot disagree about which is showing. */
+function setResultView(view) {
+  const preview = view === "preview" && !previewTab.classList.contains("is-hidden");
+
+  resultTab.classList.toggle("is-active", !preview);
+  resultTab.setAttribute("aria-selected", String(!preview));
+  previewTab.classList.toggle("is-active", preview);
+  previewTab.setAttribute("aria-selected", String(preview));
+
+  resultOutput.classList.toggle("is-hidden", preview);
+  resultPreview.classList.toggle("is-hidden", !preview);
+  /* The floating search targets the code view. */
+  resultPreview.closest(".result-surface").classList.toggle("is-previewing", preview);
+
+  /* editor.js owns the format button's state; announce rather than reach in. */
+  document.dispatchEvent(new CustomEvent("dn:result-view", { detail: { preview } }));
+
+  /* Cleared when hidden so no stale document stays loaded. */
+  resultPreview.srcdoc = preview ? latestResultText : "";
+}
+
+/* Offered only when the server reports an HTML serialization method. */
+function setPreviewAvailable(available) {
+  previewTab.classList.toggle("is-hidden", !available);
+  if (!available) {
+    setResultView("code");
+  }
+}
+
 function renderPlaceholder() {
   latestResultText = "";
   setCopyButtonState(false);
+  setPreviewAvailable(false);
 
   resultOutput.innerHTML = "";
 }
@@ -127,12 +161,20 @@ function renderSuccess(responseBody) {
   ].join("\n");
 }
 
+/* A fresh result always lands on the code view. */
+function applyResultViews(responseBody) {
+  const method = String(responseBody.metadata?.outputMethod ?? "").toLowerCase();
+  setPreviewAvailable(Boolean(latestResultText) && (method === "html" || method === "xhtml"));
+  setResultView("code");
+}
+
 function renderError(responseBody) {
   const error = responseBody?.error ?? {};
   const details = error.details ? String(error.details) : "No additional details were returned.";
 
   latestResultText = "";
   setCopyButtonState(false);
+  setPreviewAvailable(false);
 
   resultOutput.innerHTML = [
     '<div class="response-shell">',
@@ -175,13 +217,19 @@ copyResultButton.addEventListener("click", async () => {
   try {
     await copyResult();
     copyTooltip.textContent = COPY_SUCCESS_LABEL;
-    copyResultButton.classList.add("is-feedback");
+    copyResultButton.classList.remove("is-failed");
+    copyResultButton.classList.add("is-feedback", "is-copied");
     resetCopyFeedback();
   } catch (_error) {
     copyTooltip.textContent = "Failed";
-    copyResultButton.classList.add("is-feedback");
+    copyResultButton.classList.remove("is-copied");
+    copyResultButton.classList.add("is-feedback", "is-failed");
     resetCopyFeedback(2200);
   }
+});
+
+[resultTab, previewTab].forEach((tab) => {
+  tab.addEventListener("click", () => setResultView(tab.dataset.resultView));
 });
 
 transformButton.addEventListener("click", async () => {
@@ -207,6 +255,7 @@ transformButton.addEventListener("click", async () => {
 
     if (response.ok) {
       renderSuccess(responseBody);
+      applyResultViews(responseBody);
       const executionTime = responseBody.metadata?.executionTimeMs;
       requestStatus.textContent = executionTime != null
           ? `Transformation completed in ${executionTime} ms.`
