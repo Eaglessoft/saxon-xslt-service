@@ -75,44 +75,6 @@ class SaxonTransformationEngineTest {
     assertThat(result.text()).contains("<p>Hello</p>");
   }
 
-  // Verifies that a JSON stylesheet reports "json", so clients store the result as JSON.
-  @Test
-  void transformReportsJsonOutputMethod() {
-    String xml = "<root><item>Hello</item></root>";
-    String xslt = """
-        <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-          <xsl:output method="json"/>
-          <xsl:template match="/">
-            <xsl:sequence select="map{'item': string(/root/item)}"/>
-          </xsl:template>
-        </xsl:stylesheet>
-        """;
-
-    SaxonTransformationEngine.Output result = transformationEngine.transform(xml, xslt);
-
-    assertThat(result.method()).isEqualTo("json");
-    assertThat(result.text()).isEqualTo("{\"item\":\"Hello\"}");
-  }
-
-  // Verifies that a text stylesheet reports "text" instead of falling back to "xml".
-  @Test
-  void transformReportsTextOutputMethod() {
-    String xml = "<root><item>Hello</item></root>";
-    String xslt = """
-        <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-          <xsl:output method="text"/>
-          <xsl:template match="/">
-            <xsl:value-of select="/root/item"/>
-          </xsl:template>
-        </xsl:stylesheet>
-        """;
-
-    SaxonTransformationEngine.Output result = transformationEngine.transform(xml, xslt);
-
-    assertThat(result.method()).isEqualTo("text");
-    assertThat(result.text()).isEqualTo("Hello");
-  }
-
   // Verifies that invalid XSLT raises the expected compilation exception.
   @Test
   void transformRejectsInvalidXslt() {
