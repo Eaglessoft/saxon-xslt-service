@@ -9,7 +9,7 @@ public record TransformMetadata(
     long inputSize,
     long outputSize,
     /**
-     * The serialization method the result was written with: "html", "xhtml", "xml" or "text".
+     * The serialization method the result was written with: "html", "xhtml", "xml", "text" or "json".
      * Clients use it to decide how to render the output rather than sniffing the string.
      */
     String outputMethod
