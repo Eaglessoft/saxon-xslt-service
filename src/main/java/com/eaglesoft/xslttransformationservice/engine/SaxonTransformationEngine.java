@@ -61,7 +61,8 @@ public class SaxonTransformationEngine {
       XdmNode sourceDocument = buildSourceDocument(xml);
       Xslt30Transformer transformer = executable.load30();
       LimitedOutputWriter outputWriter = new LimitedOutputWriter(maxOutputSizeInBytes);
-      Serializer serializer = processor.newSerializer(outputWriter);
+      // Created from the transformer so it carries the stylesheet's xsl:output, which is what makes METHOD readable.
+      Serializer serializer = transformer.newSerializer(outputWriter);
       transformer.transform(sourceDocument.asSource(), serializer);
       String text = outputWriter.toString();
       return new Output(text, resolveOutputMethod(serializer, text));
@@ -87,10 +88,9 @@ public class SaxonTransformationEngine {
   /**
    * The stylesheet's xsl:output method, as the serializer reports it after the run.
    *
-   * Saxon does not always surface the property this way - and XSLT's own default rule can
-   * pick HTML with no xsl:output present at all, when the result root element is <html> - so
-   * an unreported method falls back to reading the output itself. Guessing is the fallback,
-   * never the primary answer.
+   * A stylesheet without an explicit method leaves the property unset - and XSLT's own default
+   * rule then picks HTML when the result root element is <html> - so an unreported method falls
+   * back to reading the output itself. Guessing is the fallback, never the primary answer.
    */
   private String resolveOutputMethod(Serializer serializer, String text) {
     String reported = serializer.getOutputProperty(Serializer.Property.METHOD);
